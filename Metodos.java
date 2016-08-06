@@ -8,6 +8,7 @@ import javax.swing.JSpinner;
 import javax.swing.JSpinner.DefaultEditor;
 import javax.swing.SpinnerModel;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.BorderFactory;
 import java.awt.Container;
 import javax.swing.ImageIcon;
 import javax.imageio.ImageIO;
@@ -19,9 +20,14 @@ import javax.swing.JTextArea;
 import javax.swing.JComboBox;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import javax.swing.event.CaretListener;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.ChangeEvent;
 import java.awt.Dimension;
 import java.awt.CardLayout;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.GridBagConstraints;
 import java.awt.BorderLayout;
 import java.awt.Insets;
@@ -34,6 +40,8 @@ import java.awt.Insets;
 import javax.swing.JScrollPane;
 import java.util.Vector;
 import java.math.BigDecimal;
+
+//Consertar bug da janela g&h de resetar o botão e continuar adicionando elementos
 
 class Derivada extends JPanel {
   
@@ -100,6 +108,7 @@ class Derivada extends JPanel {
 	protected JTextArea[] resul = new JTextArea[4];
 	protected JButton b = new JButton("Calcular");
 	protected StringBuilder sb = new StringBuilder();
+	protected boolean boo=false;
 	// h = 1000*erro
 	
 	Completa (JFrame j) {
@@ -119,9 +128,7 @@ class Derivada extends JPanel {
 		  
 		  //Colocar janela de aviso
 		  
-		  if (func.getText().length()==0||ponto.getText().length()==0) {
-	        
-	      }
+		  if (func.getText().length()==0||ponto.getText().length()==0) {}
 	      
 	      else {
 			
@@ -135,6 +142,16 @@ class Derivada extends JPanel {
 	      
 	  });
 	  func.setColumns(40);
+	  func.addCaretListener(new CaretListener() {
+	    
+	    @Override
+	    public void caretUpdate (CaretEvent e) {
+		  
+		  boo=true;
+		  	
+		}
+	    
+	  });
 	  ponto.setColumns(9);
 	  ((DefaultEditor) erro.getEditor()).getTextField().setEditable(false);
 	  p[3].setLayout(new BorderLayout(35,0));
@@ -214,18 +231,35 @@ class Derivada extends JPanel {
 	  
 	private JSpinner nx = new JSpinner(new SpinnerNumberModel (2,2,10,1));
 	private JSpinner[] der = new JSpinner[4];
-	private JPanel aux = new JPanel(new BorderLayout());
+	private JPanel aux = new JPanel(new BorderLayout(0,5));
 	private JPanel[] p3;
 	private JPanel[] p4 = new JPanel [10];
 	private JPanel[] p5 = new JPanel [7];
+	private JPanel what = new JPanel ();
 	private JPanel pextra = new JPanel(new BorderLayout());
 	private JTextArea[] jta;
-	private StringBuilder str = new StringBuilder ("f"); 
+	private JTextArea[] jta2 = new JTextArea[4];
+	private StringBuilder str; 
 	private int[] aux2 = new int[4];
+	private int a,i;
+	private JFrame janaux = new JFrame ("G & H");
+	private JPanel janp = new JPanel (new GridLayout(1,0));
+	private JPanel janp2 = new JPanel ();
+	private JTextArea[] grad;
+	private JTextArea[][] hess;
+	private boolean[] boo2 = new boolean[10];
 	
 	Parcial (JFrame j) {
 	  
 	  super(j);
+	  janaux.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+	  janaux.setLayout(new BorderLayout(6,6));
+	  janaux.add(janp,BorderLayout.NORTH);
+	  janaux.add(janp2,BorderLayout.SOUTH);
+	  janaux.setLocationRelativeTo(null);
+	  janaux.setResizable(false);
+	  janaux.setVisible(false);
+	  for (i=0;i<10;i++) boo2[i]=false;
 	  sb.appendCodePoint(0X2080);
 	  sb.appendCodePoint(0X2081);
 	  sb.appendCodePoint(0X2082);
@@ -242,18 +276,38 @@ class Derivada extends JPanel {
 	  p[1].add(new JLabel ("n"+sb.charAt(11)+" x ="),BorderLayout.WEST);
 	  p[1].add(nx,BorderLayout.EAST);
 	  ((DefaultEditor) nx.getEditor()).getTextField().setEditable(false);
+	  nx.addChangeListener( new ChangeListener () {
+		
+		@Override
+		public void stateChanged (ChangeEvent e) {
+		  
+		  janaux.setVisible(false);
+		  janp.removeAll();
+		  janp2.removeAll();
+		  boo=true;
+		  	
+		}
+		
+	  });
+	  b.removeActionListener(b.getAction());
 	  b.setText("Ok");
 	  b.addActionListener(new ActionListener() {
 	    
 	    @Override
 	    public void actionPerformed (ActionEvent e) {
+			
+		  if (boo) {
 		  
-		  fazPainel2();
-		  fazPainel3();
-		  add(aux,BorderLayout.SOUTH);
-		  aux.removeAll();
-		  aux.add(p3[0],BorderLayout.NORTH);
-		  jan.pack();
+		    fazPainel2();
+		    fazPainel3();
+		    add(aux,BorderLayout.SOUTH);
+		    aux.removeAll();
+		    aux.add(p3[0],BorderLayout.NORTH);
+		    aux.add(p4[0],BorderLayout.CENTER);
+		    jan.pack();
+		    boo=false;
+		  
+	      }
 		  	
 		}
 	     
@@ -263,35 +317,34 @@ class Derivada extends JPanel {
 	
 	void fazPainel2() {
 	  	
-	  int i;
-	  int a = Integer.parseInt(((DefaultEditor) nx.getEditor()).getTextField().getText());
-	  b = new JButton("Ok");
+	  a = Integer.parseInt(((DefaultEditor) nx.getEditor()).getTextField().getText());
 	  p3 = new JPanel[a+1];
 	  jta = new JTextArea[a];
 	  for (i=0;i<a+1;i++) p3[i]=new JPanel(new BorderLayout());
-	  for (i=0;i<a;i++) jta[i]=new JTextArea();
-	  for (i=0;i<a;i++) jta[i].setColumns(3);
+	  for (i=0;i<a;i++) jta[i]=new JTextArea(1,3);
+	  for (i=0;i<a;i++) jta[i].addCaretListener(new CaretListener () {
+		  
+		@Override
+		public void caretUpdate (CaretEvent e) {
+	  
+	      JTextArea change = (JTextArea)e.getSource();
+	  
+	      for (i=0;i<a;i++)
+	      if (change==jta[i]) {
+		  
+		    boo2[i]=true;
+		  	
+		  }
+	  	
+	    }
+	      
+	  });
 	  for (i=1;i<a+1;i++) {
 		  
 		p3[i].add(new JLabel ("x"+sb.charAt(i)+" ="),BorderLayout.WEST);
 	    p3[i].add(jta[i-1],BorderLayout.EAST);  
 		  
 	  }
-	  b.addActionListener( new ActionListener () {
-		
-		@Override
-		public void actionPerformed (ActionEvent e) {
-		  
-		  fazPainel3();
-		  pextra.add(p4[0],BorderLayout.NORTH);
-		  aux.add(pextra,BorderLayout.SOUTH);
-		  jan.pack();
-		  	
-		}
-		  
-	  });
-	  if (a<=5)b.setPreferredSize(new Dimension(60*a,17));
-	  else b.setPreferredSize(new Dimension(300,17));
 	  p3[0].setLayout(new GridBagLayout());
 	  p3[0].removeAll();
 	  grid.gridx=0;
@@ -305,22 +358,17 @@ class Derivada extends JPanel {
 		if (i%5==0) { grid.gridy++; grid.gridx=0; }  
 		  
 	  }
-	  grid.gridx=0;
-	  grid.gridy++;
-	  grid.gridwidth = a;
-	  p3[0].add(b,grid);
-	  grid.gridwidth = 1;
 	  repaint();
 	  
 	}
 	
 	void fazPainel3 () {
 	  
-	  int i;
-	  
 	  for (i=0;i<10;i++) p4[i]=new JPanel (new BorderLayout());
 	  
-	  for (i=0;i<4;i++) { der[i]=new JSpinner(new SpinnerNumberModel (0,0,9,1)); }
+	  for (i=0;i<4;i++) { der[i]=new JSpinner(new SpinnerNumberModel (0,0,a-1,1)); }
+	  
+	  for (i=0;i<4;i++) { ((DefaultEditor) der[i].getEditor()).getTextField().setEditable(false); }
 	  
 	  b = new JButton("Calcular");
 	  b.addActionListener( new ActionListener () {
@@ -328,11 +376,22 @@ class Derivada extends JPanel {
 		@Override
 		public void actionPerformed (ActionEvent e) {
 		  
+		  for (i=0;i<a;i++) if(boo2[i]==false) return;
+		  
+		  boo2[a-1]=false;
 		  aux2[0]=Integer.parseInt(((DefaultEditor) der[0].getEditor()).getTextField().getText());
 		  aux2[1]=Integer.parseInt(((DefaultEditor) der[1].getEditor()).getTextField().getText());
 		  aux2[2]=Integer.parseInt(((DefaultEditor) der[2].getEditor()).getTextField().getText());
 		  aux2[3]=Integer.parseInt(((DefaultEditor) der[3].getEditor()).getTextField().getText());
+		  der[0].setEnabled(false);
+		  der[1].setEnabled(false);
+		  der[2].setEnabled(false);
+		  der[3].setEnabled(false);
+		  str= new StringBuilder("f");
+		  what.removeAll();
 		  fazPainel4();
+		  aux.add(p5[0],BorderLayout.SOUTH);
+		  jan.pack();
 		  	
 		}
 		  
@@ -355,13 +414,15 @@ class Derivada extends JPanel {
 	  p4[2].add(p4[3],BorderLayout.EAST);
 	  p4[1].add(p4[2],BorderLayout.NORTH);
 	  p4[1].add(b,BorderLayout.CENTER);
-	  p4[0].add(new JLabel("Escolha os Elementos a Partir dos Quais f Sera Derivada:"),BorderLayout.NORTH);
+	  p4[1].add(new JLabel(),BorderLayout.EAST);
+	  p4[1].add(new JLabel(),BorderLayout.WEST);
+	  p4[0].add(new JLabel("Escolha os Elementos a Partir de Quais f Sera Derivada:"),BorderLayout.NORTH);
 	  p4[0].add(p4[1],BorderLayout.SOUTH);
 	  ((BorderLayout)p4[5].getLayout()).setHgap(130);
 	  ((BorderLayout)p4[3].getLayout()).setHgap(130);
 	  ((BorderLayout)p4[2].getLayout()).setHgap(10);
 	  ((BorderLayout)p4[1].getLayout()).setVgap(6);
-	  ((BorderLayout)p4[1].getLayout()).setHgap(60);
+	  ((BorderLayout)p4[1].getLayout()).setHgap(128);
 	  ((BorderLayout)p4[0].getLayout()).setVgap(8);
 	  	
 	}
@@ -369,9 +430,90 @@ class Derivada extends JPanel {
 	void fazPainel4 () {
 	  
 	  int i;
-	  for(i=0;i<7;i++) p5[i]=new JPanel(new BorderLayout());
+	  for(i=0;i<7;i++) p5[i]=new JPanel(new BorderLayout(0,3));
+	  for (i=0;i<4;i++) jta2[i]=new JTextArea(1,20);
+	  for (i=0;i<4;i++) jta2[i].setEditable(false);
 	  
-	  //p5[3].add();
+	  b=new JButton("Gradiente e Hessiana");
+	  b.addActionListener(new ActionListener () {
+	    
+	    @Override
+	    public void actionPerformed (ActionEvent e) {
+		  
+		  janaux.setLocationRelativeTo(null);
+		  janaux.pack();
+		  janaux.setVisible(true);
+		  
+		}
+	    
+	  });
+	  what.add(b);
+	  b.setPreferredSize(new Dimension(200,17));
+	  str.append('x');
+	  str.append(sb.charAt(aux2[0]+1));
+	  p5[6].add(new JLabel(str.toString()+" ="),BorderLayout.WEST);
+	  p5[6].add(jta2[0],BorderLayout.CENTER);
+	  str.append('x');
+	  str.append(sb.charAt(aux2[1]+1));
+	  p5[5].add(new JLabel(str.toString()+" ="),BorderLayout.WEST);
+	  p5[5].add(jta2[1],BorderLayout.CENTER);
+	  str.append('x');
+	  str.append(sb.charAt(aux2[2]+1));
+	  p5[4].add(new JLabel(str.toString()+" ="),BorderLayout.WEST);
+	  p5[4].add(jta2[2],BorderLayout.CENTER);
+	  str.append('x');
+	  str.append(sb.charAt(aux2[3]+1));
+	  p5[3].add(new JLabel(str.toString()+" ="),BorderLayout.WEST);
+	  p5[3].add(jta2[3],BorderLayout.CENTER);
+	  p5[2].add(p5[6],BorderLayout.NORTH);
+	  p5[2].add(p5[5],BorderLayout.SOUTH);
+	  p5[1].add(p5[4],BorderLayout.NORTH);
+	  p5[1].add(p5[3],BorderLayout.SOUTH);
+	  p5[0].add(p5[2],BorderLayout.NORTH);
+	  p5[0].add(p5[1],BorderLayout.CENTER);
+	  p5[0].add(what,BorderLayout.SOUTH);
+	  ((BorderLayout)p5[0].getLayout()).setVgap(6);
+	  ((BorderLayout)p5[6].getLayout()).setHgap(38);
+	  ((BorderLayout)p5[5].getLayout()).setHgap(26);
+	  ((BorderLayout)p5[4].getLayout()).setHgap(14);
+	  ((BorderLayout)p5[3].getLayout()).setHgap(2);
+	  fazJanela();
+	  	
+	}
+	
+	public void fazJanela() {
+		
+	  int i,j;
+	  
+	  grad = new JTextArea[a];
+	  hess = new JTextArea[a][a];
+	  
+	  janp2.setLayout(new GridLayout(a,a));
+	  
+	  ((GridLayout)janp.getLayout()).setHgap(5);
+	  ((GridLayout)janp2.getLayout()).setHgap(5);
+	  ((GridLayout)janp2.getLayout()).setVgap(5);
+	  
+	  janp.setBorder(BorderFactory.createTitledBorder("Gradiente"));
+	  janp2.setBorder(BorderFactory.createTitledBorder("Hessiana"));
+	  
+	  for (i=0;i<a;i++) { grad[i] = new JTextArea(1,5); grad[i].setEditable(false); }
+	  
+	  for (i=0;i<a;i++) 
+	    for (j=0;j<a;j++) {
+			
+	      hess[i][j]= new JTextArea(1,5);
+	      hess[i][j].setEditable(false);
+	      
+	    }
+	      
+	  //chama para preencher os campos
+	  
+	  for (i=0;i<a;i++) janp.add(grad[i]);
+	  
+	  for (i=0;i<a;i++)
+	    for (j=0;j<a;j++)
+	      janp2.add(hess[i][j]);
 	  	
 	}
 	  
