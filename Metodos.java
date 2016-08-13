@@ -54,10 +54,13 @@ import java.awt.Color;
 import javax.swing.table.TableColumnModel;
 import javax.swing.UIManager;
 import java.awt.event.KeyEvent;
+import javax.swing.JOptionPane;
 
 //Consertar bug da janela g&h de resetar o botão e continuar adicionando elementos
 //Adicionar item jacobiano
 //Possibilitar guardar dados em arquivos
+//Aviso se máximo de iterações ?
+//Tentar usar BigDecimal
 
 //Classe base dos itens da aba derivada
 class Derivada extends JPanel {
@@ -119,20 +122,20 @@ class Derivada extends JPanel {
 class Completa extends JPanel {
 	
   JFrame jan; // Instancia da janela principal
-  Expressao exp = new Expressao(); // Instancia do interpretador de funções
+  Metodos mtd = new Metodos(); // Instancia do interpretador de funções
   JPanel[] p = new JPanel[6]; // Paineis da interface que recebe valor de x,função e erro (entrada)
   JPanel[] p2 = new JPanel[4]; // Paineis da interface que mostra a resposta
   JPanel paux = new JPanel(new GridBagLayout()); // Contém os paineis com a interface da resposta
   JPanel pentry = new JPanel(new BorderLayout(0,3)); // Contém os paineis de entrada
   JPanel presul = new JPanel(new BorderLayout()); // Contém painéis de saída
   GridBagConstraints grid = new GridBagConstraints(); // Controla o layout do painel auxiliar
-  JTextArea func = new JTextArea(); // Recebe a função
-  JTextArea ponto = new JTextArea(); // Recebe o valor de x
+  JTextArea func = new JTextArea(1,40); // Recebe a função
+  JTextArea ponto = new JTextArea(1,9); // Recebe o valor de x
   JSpinner erro = new JSpinner(new SpinnerNumberModel (0.01,0.001,0.1,0.001)); // Determina o valor do erro
   JTextArea[] resul = new JTextArea[4]; // Contém as respostas
   JButton b = new JButton("Calcular"); // Anexa os painéis de resposta na janela principal
   StringBuilder sb = new StringBuilder(); // Guarda caracteres especias a serem utilizados ao longo do programa
-  // h = 1000*erro
+  JFrame warning; // Janela de aviso
   
   //Cria a interface base para recepção dos dados necessários
   Completa (JFrame j) {
@@ -149,25 +152,53 @@ class Completa extends JPanel {
 	    
 	  @Override
 	  public void actionPerformed(ActionEvent e) {
+		
+		double temp=0;
 		  
-		//Colocar janela de aviso
-		  
-		if (func.getText().length()==0||ponto.getText().length()==0) {}
-	      
-	    else {
+		if (func.getText().length()==0||ponto.getText().length()==0) {
 			
-		  fazPainel();
-	      add(presul,BorderLayout.SOUTH);
-	      jan.pack();
-			  
+		  JOptionPane.showMessageDialog(warning,"Preencha todos os campos","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
+		  
 		}
+		
+		else if (func.getText().length()>0) { 
+		  
+		  try {
+			
+			temp=Double.parseDouble( ponto.getText().replace(",",".") );
+			  
+		  }catch (Exception ex) {
+		    
+		    JOptionPane.showMessageDialog(warning,"Valor de x inválido","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
+		    return;
+		      
+		  }
+
+		  mtd.funcao(func.getText(),temp);
+		  
+		  if (!mtd.completa) {
+		    
+		    JOptionPane.showMessageDialog(warning,"Função inválida","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
+		    mtd.completa=true;
+		    return;
+
+	      }
+		  
+		}
+		  
+		fazPainel();
+		temp=Double.parseDouble( ponto.getText().replace(",",".") );
+		resul[0].setText(""+mtd.derCompleta1(func.getText(),temp,(Double)erro.getValue()));
+		resul[1].setText(""+mtd.derCompleta2(func.getText(),temp,(Double)erro.getValue()));
+		resul[2].setText(""+mtd.derCompleta3(func.getText(),temp,(Double)erro.getValue()));
+		resul[3].setText(""+mtd.derCompleta4(func.getText(),temp,(Double)erro.getValue()));
+	    add(presul,BorderLayout.SOUTH);
+	    jan.pack();
 		  	
       }
 	      
 	});
 	
-	func.setColumns(40);
-	ponto.setColumns(9);
 	((DefaultEditor) erro.getEditor()).getTextField().setEditable(false);
 	p[3].setLayout(new BorderLayout(35,0));
 	p[0].add(new JLabel ("f(x) ="),BorderLayout.WEST);
@@ -218,34 +249,13 @@ class Completa extends JPanel {
 	presul.add(paux,BorderLayout.WEST);
 	  	
   }
-  
-  //Calcula o valor de uma função dada em um ponto dado
-  public double funcao(double x,String funcao) {
-	  
-	double num = 0;
-	  
-	try{
-		  
-	  num = exp.valor(funcao);
-		
-	}catch(Exception e){}
-	    
-    return num;
-		
-  }
-
-  //Calcula o valor da derivada para o ponto com o erro dado	
-  public double calculaDerivada (String f,double x,double erro,double h) {
-		
-	return 1.23;
-	  	
-  }
 	  
 }
 
 //Classe do item derivada parcial
 class Parcial extends Completa { 
-	  
+  
+  Metodos mtd = new Metodos();
   JSpinner nx = new JSpinner(new SpinnerNumberModel (2,2,10,1)); //Controla o número de variáveis da função
   JSpinner[] der = new JSpinner[2]; // Vetor com os spinners que controlam em função de que xn cada derivada será feita
   JPanel aux = new JPanel(new BorderLayout(0,5)); // Contém os paineis que recebem o valor de cada xn e a partir de quais deles será feita a derivada
@@ -265,21 +275,12 @@ class Parcial extends Completa {
   JTextArea[][] hess; // Mostram os valores do gradiente
   boolean boo=false; // Controla o andamento da primeira entrada do progrma
   boolean[] boo2 = new boolean[10]; // Controla o andamento da segunda entrada do programa
+  JButton b2 = new JButton ("Ok");
   
   //Cria a interface base para recepção dos dados necessários, modificando alguns campos, e preparando uma janela auxiliar de gradiente e hessiana
   Parcial (JFrame j) {
 	  
 	super(j);
-	func.addCaretListener(new CaretListener () {
-		  
-	  @Override
-	  public void caretUpdate (CaretEvent e) {
-	  
-	    boo=true;
-	  	
-	  }
-	      
-	});
 	for (i=0;i<10;i++) boo2[i]=false;
 	sb.appendCodePoint(0X2080);
 	sb.appendCodePoint(0X2081);
@@ -294,8 +295,11 @@ class Parcial extends Completa {
 	sb.appendCodePoint(0X2070);
 	((BorderLayout)p[3].getLayout()).setHgap(45);
 	p[1].removeAll();
+	p[4].removeAll();
 	p[1].add(new JLabel ("n"+sb.charAt(11)+" x ="),BorderLayout.WEST);
 	p[1].add(nx,BorderLayout.EAST);
+	p[4].add(p[3],BorderLayout.WEST);
+	p[4].add(b2,BorderLayout.EAST);
 	((DefaultEditor) nx.getEditor()).getTextField().setEditable(false);
 	nx.addChangeListener( new ChangeListener () {
 		
@@ -311,14 +315,19 @@ class Parcial extends Completa {
 		
 	});
 	  
-	b.removeActionListener(b.getAction());
-	b.setText("Ok");
-	b.addActionListener(new ActionListener() {
+
+	b2.addActionListener(new ActionListener() {
 	    
 	  @Override
 	  public void actionPerformed (ActionEvent e) {
+		
+		if (func.getText().length()==0) {
 			
-		if (boo) {
+		  JOptionPane.showMessageDialog(warning,"Preencha o campo da função","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
+		  
+		}
+			
+		else if (boo) {
 		  
 		  fazPainel2();
 		  fazPainel3();
@@ -889,20 +898,231 @@ class ButtonColumn extends AbstractCellEditor implements TableCellRenderer, Tabl
 //Classe que contém a main e controla o painel com abas que vai para cada método
 class Metodos {
   
+  Expressao exp = new Expressao();
+  int opc=1;
+  JFrame warning; // Janela de aviso
+  JFrame jan = new JFrame ("Metodos"); // Janela principal
+  Derivada der;
+  boolean completa=true;
+  
   //Cria as abas
   public static void main(String[] args) {
 	  
+	Metodos mtd = new Metodos();
+	JFrame jan = new JFrame ("Metodos");
+	mtd.der = new Derivada(jan);
+	  
     JTabbedPane tp = new JTabbedPane (); // Contém as abas que separam as áreas do programa
-    JFrame jan = new JFrame ("Metodos"); // Janela principal
     ImageIcon icon = new ImageIcon("Derivada_v2.jpg"); // Icone da aba de derivada
     
-    tp.addTab("D & R",icon,new Derivada(jan),"Deriva e Acha Raízes");
+    tp.addTab("D & R",icon,mtd.der,"Deriva e Acha Raízes");
     jan.add(tp);
     jan.pack();
     jan.setResizable(false);
     jan.setVisible(true);
     
     
-  } 
+  }
   
+  //Calcula o valor de uma função dada em um ponto dado
+  public double funcao(String funcao,double x) {
+	  
+	double num = 0;
+	
+	exp.variavel("x",x);
+	
+	try {
+		  
+	  num = exp.valor(funcao);
+	  
+	}catch(Exception e){ 
+	  
+	  completa=false;
+	  	
+	}
+	    
+    return num;
+		
+  }
+
+  //Calcula a derivada completa de primeira ordem
+  public double derCompleta1 (String f,double x,double e) {
+	
+	int i;
+	double delta;
+    double p;
+    double q;
+    boolean go=true;
+    double erro=Double.MAX_VALUE;
+    double resp=0;
+    
+    if (1024*e>2) delta=100*e;
+    
+    else delta=1024*e;
+
+    p = (funcao(f,x+delta) - funcao(f,x-delta)) / (2*delta);
+    
+    for (i=0;i<500&&go;i++) {
+      
+      q = p;
+      delta /= 2;
+      p = (funcao(f,x+delta) - funcao(f,x-delta)) / (2*delta);
+      
+      if (Math.abs(p-q)<erro) erro = Math.abs(p-q);
+      
+      else {
+		
+		resp=q;  
+		go=false;
+		
+	  }
+      
+      if (Math.abs(p-q)<e) {
+		
+		resp=p;
+		go=false;
+		  
+	  }
+         
+    }
+		
+    return resp;
+    	  	
+  }
+  
+  //Calcula a derivada completa de segunda ordem
+  public double derCompleta2 (String f,double x,double e) {
+	
+	int i;
+	double delta;
+    double p;
+    double q;
+    boolean go=true;
+    double erro=Double.MAX_VALUE;
+    double resp=0;
+    
+    if (1024*e>2) delta=100*e;
+    
+    else delta=1024*e;
+
+    p = (funcao(f,x+2*delta) -2*funcao(f,x)  +funcao(f,x-2*delta) ) / (Math.pow(2*delta,2));
+    
+    for (i=0;i<500&&go;i++) {
+      
+      q = p;
+      delta /= 2;
+      p = (funcao(f,x+2*delta) -2*funcao(f,x)  +funcao(f,x-2*delta) ) / (Math.pow(2*delta,2));
+      
+      if (Math.abs(p-q)<erro) erro = Math.abs(p-q);
+      
+      else {
+		
+		resp=q;  
+		go=false;
+		
+	  }
+      
+      if (Math.abs(p-q)<e) {
+		
+		resp=p;
+		go=false;
+		  
+	  }
+         
+    }
+		
+    return resp;
+    	  	
+  }
+  
+  //Calcula a derivada completa de terceira ordem
+  public double derCompleta3 (String f,double x,double e) {
+	
+	int i;
+	double delta;
+    double p;
+    double q;
+    boolean go=true;
+    double erro=Double.MAX_VALUE;
+    double resp=0;
+    
+    if (1024*e>2) delta=100*e;
+    
+    else delta=1024*e;
+
+    p = (funcao(f,x+3*delta) -3*funcao(f,x+delta) +3*funcao(f,x-delta)  -funcao(f,x-3*delta) ) / (Math.pow(2*delta,3));
+    
+    for (i=0;i<500&&go;i++) {
+      
+      q = p;
+      delta /= 2;
+     p = (funcao(f,x+3*delta) -3*funcao(f,x+delta) +3*funcao(f,x-delta)  -funcao(f,x-3*delta) ) / (Math.pow(2*delta,3));
+      
+      if (Math.abs(p-q)<erro) erro = Math.abs(p-q);
+      
+      else {
+		
+		resp=q;  
+		go=false;
+		
+	  }
+      
+      if (Math.abs(p-q)<e) {
+		
+		resp=p;
+		go=false;
+		  
+	  }
+         
+    }
+		
+    return resp;
+    	  	
+  }
+  
+  //Calcula a derivada completa de quarta ordem
+  public double derCompleta4 (String f,double x,double e) {
+	
+	int i;
+	double delta;
+    double p;
+    double q;
+    boolean go=true;
+    double erro=Double.MAX_VALUE;
+    double resp=0;
+    
+    if (1024*e>2) delta=100*e;
+    
+    else delta=1024*e;
+
+    p = (funcao(f,x+4*delta) -4*funcao(f,x+2*delta) +6*funcao(f,x) -4*funcao(f,x-2*delta) +funcao(f,x-4*delta) ) / (Math.pow(2*delta,4));
+    
+    for (i=0;i<500&&go;i++) {
+      
+      q = p;
+      delta /= 2;
+      p = (funcao(f,x+4*delta) -4*funcao(f,x+2*delta) +6*funcao(f,x) -4*funcao(f,x-2*delta) +funcao(f,x-4*delta) ) / (Math.pow(2*delta,4));
+      
+      if (Math.abs(p-q)<erro) erro = Math.abs(p-q);
+      
+      else {
+		
+		resp=q;  
+		go=false;
+		
+	  }
+      
+      if (Math.abs(p-q)<e) {
+		
+		resp=p;
+		go=false;
+		  
+	  }
+         
+    }
+		
+    return resp;
+    	  	
+  }
+   
 }

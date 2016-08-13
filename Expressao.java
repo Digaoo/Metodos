@@ -163,12 +163,4 @@ public class Expressao {
     variaveis.put(ident, (double) val);
   }
 
-  public static void main(String[] args) throws Exception {
-    Expressao s = new Expressao();
-    s.variavel("ind", 2.0);
-    s.variavel("xis[1]", 2.0);
-    s.variavel("xis[-10]", 5.43);
-    System.out.println(s.valor("3^2"));
-
-  }
 }
