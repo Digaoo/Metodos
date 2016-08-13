@@ -56,11 +56,8 @@ import javax.swing.UIManager;
 import java.awt.event.KeyEvent;
 
 //Consertar bug da janela g&h de resetar o botão e continuar adicionando elementos
-//Para raiz preparar classe com matriz big decimal e vetor jbutton, para fazer a matriz desejada
 //Adicionar item jacobiano
 //Possibilitar guardar dados em arquivos
-//Colocar combo box em raizes para escolher método de encontrar raízes
-//Modificar derivada parcial para que vá apenas até a derivada segunda
 
 //Classe base dos itens da aba derivada
 class Derivada extends JPanel {
@@ -250,16 +247,16 @@ class Completa extends JPanel {
 class Parcial extends Completa { 
 	  
   JSpinner nx = new JSpinner(new SpinnerNumberModel (2,2,10,1)); //Controla o número de variáveis da função
-  JSpinner[] der = new JSpinner[4]; // Vetor com os spinners que controlam em função de que xn cada derivada será feita
+  JSpinner[] der = new JSpinner[2]; // Vetor com os spinners que controlam em função de que xn cada derivada será feita
   JPanel aux = new JPanel(new BorderLayout(0,5)); // Contém os paineis que recebem o valor de cada xn e a partir de quais deles será feita a derivada
   JPanel[] p3; // Contém cada xn e recebe seus valores
-  JPanel[] p4 = new JPanel [10]; // Contém a partir de qual xn cada derivada será calculada
-  JPanel[] p5 = new JPanel [7]; // Paineis com as respostas das derivadas
+  JPanel[] p4 = new JPanel [5]; // Contém a partir de qual xn cada derivada será calculada
+  JPanel[] p5 = new JPanel [3]; // Paineis com as respostas das derivadas
   JPanel what = new JPanel (); // Painel que contém o botão para criar a janela auxiliar
   JTextArea[] jta; // Recebem o valor de cada xn
-  JTextArea[] jta2 = new JTextArea[4]; // Contém a resposta das derivadas
+  JTextArea[] jta2 = new JTextArea[2]; // Contém a resposta das derivadas
   StringBuilder str; // Forma os jlabels da resposta
-  int[] aux2 = new int[4]; // Recebe o indice de cada xn que será usado nas derivadas
+  int[] aux2 = new int[2]; // Recebe o indice de cada xn que será usado nas derivadas
   int a,i; // Variáveis auxiliares/contadores
   JFrame janaux = new JFrame ("G & H"); // Janela auxiliar que contém gradiente e hessiana
   JPanel janp = new JPanel (new GridLayout(1,0)); // Painel que contém a interface dos valores do gradiente
@@ -394,13 +391,14 @@ class Parcial extends Completa {
   //Cria o painel de cada derivada recebendo a informação de em função de que xn essa derivada será calculada
   public void fazPainel3 () {
 	  
-	for (i=0;i<10;i++) p4[i]=new JPanel (new BorderLayout());
+	for (i=0;i<5;i++) p4[i]=new JPanel (new BorderLayout());
 	  
-	for (i=0;i<4;i++) { der[i]=new JSpinner(new SpinnerNumberModel (0,0,a-1,1)); }
+	for (i=0;i<2;i++) { der[i]=new JSpinner(new SpinnerNumberModel (0,0,a-1,1)); }
 	  
-	for (i=0;i<4;i++) { ((DefaultEditor) der[i].getEditor()).getTextField().setEditable(false); }
+	for (i=0;i<2;i++) { ((DefaultEditor) der[i].getEditor()).getTextField().setEditable(false); }
 	  
 	b = new JButton("Calcular");
+	
 	b.addActionListener( new ActionListener () {
 		
       @Override
@@ -411,16 +409,13 @@ class Parcial extends Completa {
 		boo2[a-1]=false;
 		aux2[0]=Integer.parseInt(((DefaultEditor) der[0].getEditor()).getTextField().getText());
 		aux2[1]=Integer.parseInt(((DefaultEditor) der[1].getEditor()).getTextField().getText());
-		aux2[2]=Integer.parseInt(((DefaultEditor) der[2].getEditor()).getTextField().getText());
-		aux2[3]=Integer.parseInt(((DefaultEditor) der[3].getEditor()).getTextField().getText());
 		der[0].setEnabled(false);
 		der[1].setEnabled(false);
-		der[2].setEnabled(false);
-		der[3].setEnabled(false);
 		str= new StringBuilder("f");
 		what.removeAll();
 		fazPainel4();
 		aux.add(p5[0],BorderLayout.SOUTH);
+		((BorderLayout)(aux.getLayout())).setVgap(12);
 		jan.pack();
 		  	
       }
@@ -428,33 +423,20 @@ class Parcial extends Completa {
 	});
 	  
 	b.setPreferredSize(new Dimension(100,17));
-	p4[6].add(new JLabel ("f'"),BorderLayout.WEST);
-	p4[6].add(der[0],BorderLayout.EAST);
-	p4[7].add(new JLabel ("f''"),BorderLayout.WEST);
-	p4[7].add(der[1],BorderLayout.EAST);
-	p4[8].add(new JLabel ("f'''"),BorderLayout.WEST);
-	p4[8].add(der[2],BorderLayout.EAST);
-	p4[9].add(new JLabel ("f''''"),BorderLayout.WEST);
-	p4[9].add(der[3],BorderLayout.EAST);
-	p4[5].add(p4[6],BorderLayout.EAST);
-	p4[4].add(p4[7],BorderLayout.WEST);
-	p4[4].add(p4[8],BorderLayout.EAST);
-	p4[3].add(p4[9],BorderLayout.WEST);
-	p4[2].add(p4[5],BorderLayout.WEST);
-	p4[2].add(p4[4],BorderLayout.CENTER);
-	p4[2].add(p4[3],BorderLayout.EAST);
-	p4[1].add(p4[2],BorderLayout.NORTH);
-	p4[1].add(b,BorderLayout.CENTER);
-	p4[1].add(new JLabel(),BorderLayout.EAST);
-	p4[1].add(new JLabel(),BorderLayout.WEST);
+	p4[4].add(new JLabel ("f'"),BorderLayout.WEST);
+	p4[4].add(der[0],BorderLayout.EAST);
+	p4[3].add(new JLabel ("f''"),BorderLayout.WEST);
+	p4[3].add(der[1],BorderLayout.EAST);
+	p4[2].add(p4[4],BorderLayout.EAST);
+	p4[2].add(Box.createHorizontalStrut(180),BorderLayout.WEST);
+	p4[1].add(p4[3],BorderLayout.WEST);
+	p4[1].add(Box.createHorizontalStrut(180),BorderLayout.EAST);
 	p4[0].add(new JLabel("Escolha os Elementos a Partir de Quais f Sera Derivada:"),BorderLayout.NORTH);
-	p4[0].add(p4[1],BorderLayout.SOUTH);
-	((BorderLayout)p4[5].getLayout()).setHgap(130);
-	((BorderLayout)p4[3].getLayout()).setHgap(130);
-	((BorderLayout)p4[2].getLayout()).setHgap(10);
-	((BorderLayout)p4[1].getLayout()).setVgap(6);
-	((BorderLayout)p4[1].getLayout()).setHgap(128);
-	((BorderLayout)p4[0].getLayout()).setVgap(8);
+	p4[0].add(p4[2],BorderLayout.WEST);
+	p4[0].add(p4[1],BorderLayout.EAST);
+	p4[0].add(b,BorderLayout.SOUTH);
+	
+	((BorderLayout)(p4[0].getLayout())).setVgap(10);
 	  	
   }
   
@@ -462,11 +444,12 @@ class Parcial extends Completa {
   public void fazPainel4 () {
 	  
 	int i;
-	for(i=0;i<7;i++) p5[i]=new JPanel(new BorderLayout(0,3));
-	for (i=0;i<4;i++) jta2[i]=new JTextArea(1,20);
-	for (i=0;i<4;i++) jta2[i].setEditable(false);
+	for(i=0;i<3;i++) p5[i]=new JPanel(new BorderLayout(0,3));
+	for (i=0;i<2;i++) jta2[i]=new JTextArea(1,20);
+	for (i=0;i<2;i++) jta2[i].setEditable(false);
 	  
 	b=new JButton("Gradiente e Hessiana");
+	
 	b.addActionListener(new ActionListener () {
 	    
 	  @Override
@@ -482,34 +465,19 @@ class Parcial extends Completa {
 	  
 	what.add(b);
 	b.setPreferredSize(new Dimension(200,17));
+	
 	str.append('x');
 	str.append(sb.charAt(aux2[0]+1));
-	p5[6].add(new JLabel(str.toString()+" ="),BorderLayout.WEST);
-	p5[6].add(jta2[0],BorderLayout.CENTER);
+	p5[2].add(new JLabel(str.toString()+"    ="),BorderLayout.WEST);
+	p5[2].add(jta2[0],BorderLayout.CENTER);
 	str.append('x');
 	str.append(sb.charAt(aux2[1]+1));
-	p5[5].add(new JLabel(str.toString()+" ="),BorderLayout.WEST);
-	p5[5].add(jta2[1],BorderLayout.CENTER);
-	str.append('x');
-	str.append(sb.charAt(aux2[2]+1));
-	p5[4].add(new JLabel(str.toString()+" ="),BorderLayout.WEST);
-	p5[4].add(jta2[2],BorderLayout.CENTER);
-	str.append('x');
-	str.append(sb.charAt(aux2[3]+1));
-	p5[3].add(new JLabel(str.toString()+" ="),BorderLayout.WEST);
-	p5[3].add(jta2[3],BorderLayout.CENTER);
-	p5[2].add(p5[6],BorderLayout.NORTH);
-	p5[2].add(p5[5],BorderLayout.SOUTH);
-	p5[1].add(p5[4],BorderLayout.NORTH);
-	p5[1].add(p5[3],BorderLayout.SOUTH);
+	p5[1].add(new JLabel(str.toString()+" ="),BorderLayout.WEST);
+	p5[1].add(jta2[1],BorderLayout.CENTER);
 	p5[0].add(p5[2],BorderLayout.NORTH);
 	p5[0].add(p5[1],BorderLayout.CENTER);
 	p5[0].add(what,BorderLayout.SOUTH);
 	((BorderLayout)p5[0].getLayout()).setVgap(6);
-	((BorderLayout)p5[6].getLayout()).setHgap(38);
-	((BorderLayout)p5[5].getLayout()).setHgap(26);
-	((BorderLayout)p5[4].getLayout()).setHgap(14);
-	((BorderLayout)p5[3].getLayout()).setHgap(2);
 	fazJanela();
 	  	
   }
@@ -566,13 +534,17 @@ class Raiz extends Completa {
 	  
   JTextArea pa = new JTextArea(1,5); //Recebe o valor do ponto a
   JTextArea pb = new JTextArea(1,5); //Recebe o valor do ponto b
+  String[] metodos = {"Divisão ao Meio","Cordas","Newton","Cordas Modificado","Newton Modificado"}; // Contém o nome dos metodos de calculo de raiz
+  int metodo=0; // metodo utilizado efeteivamente no calculo
+  JComboBox<String> jcbox = new JComboBox <> (metodos); // Contém os metodos de calculo de raiz
   JTable table; // Tabela que mostra os intervalos
   String[] colunas = {"a","b","Raiz"}; // Contém o nome das colunas da tabelas
   JScrollPane jsp; // Contém a tabela
   Vector<BigDecimal> x1 = new Vector<>(); // Contém o valor de cada ponto a
   Vector<BigDecimal> x2 = new Vector<>(); // Contém o valor de cada ponto b
   Object[][] data = new Object[5][3]; // Contém os dados mostrados na tabela
-  Integer datum [][]={{1,2},{3,4},{5,6},{7,8},{9,10}}; // Temporário  
+  ButtonColumn buttonColumn; // Instancia da classe que cria os botões na tabela
+  boolean[] calculado;
   
   //Cria a interface inicial de recepção de dados fazendo algumas modificações
   Raiz (JFrame j) {
@@ -589,6 +561,18 @@ class Raiz extends Completa {
 	p2[0].add(pa,BorderLayout.EAST);
 	p2[1].add(new JLabel ("b ="),BorderLayout.WEST);
 	p2[1].add(pb,BorderLayout.EAST);
+	
+	jcbox.addActionListener(new ActionListener () {
+	 	
+	  @Override
+      public void actionPerformed(ActionEvent e) {
+		 
+        System.out.println(jcbox.getSelectedIndex());
+        
+      }
+      
+    }); 
+	
 	b.addActionListener (new ActionListener () {
 		
 	  @Override
@@ -616,6 +600,8 @@ class Raiz extends Completa {
      
     int i;
     
+    add(jcbox,BorderLayout.CENTER);
+    
     for (i=0;i<5;i++) {
 	  
 	  data[i][0] = new BigDecimal(i);
@@ -623,18 +609,63 @@ class Raiz extends Completa {
 	  data[i][2] = "Calcular";
 	  	
 	}
+	
+	calculado = new boolean[5];
+	
+	for (i=0;i<5;i++) {
+	  
+	  calculado[i]=false;
+	  	
+	}
     
     table = new JTable (data,colunas) {
 	  
+	  //Controla se uma célula pode ser editada
 	  public boolean isCellEditable(int row, int column) {
         
-        // Colocar mecanismo para tirar linhas especificas
-        return (column==2);
+        if (column==2&&!calculado[row]) return true;
         
+        else return false;
+        
+      }
+      
+      //Controla o renderizador de uma célula
+      public TableCellRenderer getCellRenderer(int row, int column) {
+      
+        if (column==2&&calculado[row]) {
+      
+          return super.getCellRenderer(0, 0);
+    
+        }
+    
+        else {
+    
+          return super.getCellRenderer(row, column);
+      
+         }
+    
+      }
+      
+      //Controla o editor de uma célula
+      public TableCellEditor getCellEditor (int row, int column) {
+      
+        if (column==2&&calculado[row]) {
+      
+          return super.getCellEditor(0, 0);
+    
+        }
+    
+        else {
+    
+          return super.getCellEditor(row, column);
+      
+         }
+    
       }
       
 	};
     
+    //A ação realizada pelos botões do jtable
     Action intervalo = new AbstractAction() {
       
       public void actionPerformed(ActionEvent e){
@@ -643,12 +674,17 @@ class Raiz extends Completa {
         int modelRow = Integer.valueOf( e.getActionCommand() );
         System.out.println("Linha: "+modelRow);
         //modelRow = index do vector com valor de interesse
-        
+        //if (!metodo)
+        //else if (metodo==1)
+        data[modelRow][2]=modelRow+"";
+        calculado[modelRow]=true;
+        repaint();
          
       }
    
     };
-    ButtonColumn buttonColumn = new ButtonColumn(table, intervalo, 2);
+    
+    buttonColumn = new ButtonColumn(table, intervalo, 2);
     jsp = new JScrollPane (table);
     add(jsp,BorderLayout.SOUTH);
     jsp.setPreferredSize(new Dimension (300,80));
