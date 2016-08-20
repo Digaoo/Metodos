@@ -55,22 +55,32 @@ import javax.swing.table.TableColumnModel;
 import javax.swing.UIManager;
 import java.awt.event.KeyEvent;
 import javax.swing.JOptionPane;
+import java.text.DecimalFormat;
+import javax.swing.border.EmptyBorder;
+import javax.swing.text.PlainDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.JRadioButton;
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import java.awt.event.ItemListener;
+import java.awt.event.ItemEvent;
 
-//Adicionar item jacobiano
+//Limpar tudo em sistemas
 //Possibilitar guardar dados em arquivos
 //Aviso se máximo de iterações ?
-//Tentar usar BigDecimal
 
 //Classe base dos itens da aba derivada
 class Derivada extends JPanel {
   
-  String[] itens = new String [3]; //Vetor que guarda os itens do combo box
+  String[] itens = new String [4]; //Vetor que guarda os itens do combo box
   JComboBox<String> jcb; //Combo box
   JPanel pmain = new JPanel(new CardLayout()); //Painel que cuida dos itens do combo box
   JFrame jan; //Janela principal
   CardLayout cl; // Instância do layout que cuida dos itens do combo box
   Completa comp; //Instancia do painel de derivada completa
   Parcial parc; //Instancia do painel de derivada parcial
+  Jacobiano jac; //Instancia do painel de matriz de jacobiano
   Raiz ra; //Instancia do painel de raiz de função
   
   //Cria a estrutura para acessar os itens da aba
@@ -79,11 +89,13 @@ class Derivada extends JPanel {
     jan=j;
     comp = new Completa(jan);
     parc = new Parcial(jan);
+    jac = new Jacobiano(jan);
     ra = new Raiz(jan);
     setLayout (new BorderLayout(10,5));
     itens[0]=new String("Achar Derivada Completa Em Um Ponto");
     itens[1]=new String("Achar Derivada Parcial Em Um Ponto");
-    itens[2]=new String("Achar Raizes");
+    itens[2]=new String("Matriz Jacobiano");
+    itens[3]=new String("Achar Raizes");
     jcb = new JComboBox <> (itens);
     jcb.addActionListener(new ActionListener () {
 	 	
@@ -96,9 +108,11 @@ class Derivada extends JPanel {
         comp = new Completa(jan);
         parc.janaux.setVisible(false);
         parc = new Parcial(jan);
+        jac = new Jacobiano (jan);
         ra = new Raiz(jan);
         pmain.add(comp,"Achar Derivada Completa Em Um Ponto");
 	    pmain.add(parc,"Achar Derivada Parcial Em Um Ponto");
+	    pmain.add(jac,"Matriz Jacobiano");
 	    pmain.add(ra,"Achar Raizes");
         cl.show(pmain,painel);
         jan.pack();
@@ -110,6 +124,7 @@ class Derivada extends JPanel {
 	add(jcb,BorderLayout.NORTH);
 	pmain.add(comp,"Achar Derivada Completa Em Um Ponto");
 	pmain.add(parc,"Achar Derivada Parcial Em Um Ponto");
+	pmain.add(jac,"Calcular a Matriz de Jacobiano");
 	pmain.add(ra,"Achar Raizes");
 	add(pmain,BorderLayout.SOUTH);
 	  
@@ -512,38 +527,189 @@ class Parcial extends Completa {
 	  
 }
 
-//Classe do itrm raiz de função em um intervalo 
+//Classe do item jacobiano
+class Jacobiano extends Parcial {
+  
+  JPanel dimensao = new JPanel (new BorderLayout()); // Pega o numero de xn
+  JSpinner nf = new JSpinner(new SpinnerNumberModel (2,2,10,1)); //Controla o número de variáveis da função
+  JPanel delta = new JPanel(new BorderLayout()); // Painel que representa o delta 
+  JSpinner pd = new JSpinner(new SpinnerNumberModel (0,0,9,1)); //Recebe o valor do delta
+  JButton b5 = new JButton ("Continuar"); // Abre o painel para segunda entrada
+  
+  int aux;
+  JPanel[] fnview;
+  JTextArea[] fnvalue;
+  JButton b6 = new JButton ("Calcular Matriz Jacobiano");
+  
+  //Cria o painel inicial do item
+  Jacobiano (JFrame j) {
+	
+	super(j);
+	pentry.removeAll();
+	sb.appendCodePoint(0X2080);
+	sb.appendCodePoint(0X2081);
+	sb.appendCodePoint(0X2082);
+	sb.appendCodePoint(0X2083);
+	sb.appendCodePoint(0X2084);
+	sb.appendCodePoint(0X2085);
+    sb.appendCodePoint(0X2086);
+	sb.appendCodePoint(0X2087);
+	sb.appendCodePoint(0X2088);
+	sb.appendCodePoint(0X2089);
+	sb.appendCodePoint(0X2070);
+	((DefaultEditor) nf.getEditor()).getTextField().setEditable(false);
+	((DefaultEditor) pd.getEditor()).getTextField().setEditable(false);
+	x.setColumns(5);
+	dimensao.add(new JLabel("n"+sb.charAt(11)+" f(x) ="),BorderLayout.WEST);
+	dimensao.add(nf,BorderLayout.EAST);
+	delta.add(new JLabel("xn ="),BorderLayout.WEST);
+	delta.add(pd,BorderLayout.EAST);
+	grid.gridx=0;
+	grid.gridy=0;
+	grid.insets = new Insets(0,0,0,0);
+	pentry.add(dimensao,grid);
+	grid.gridx=1;
+	grid.insets = new Insets(0,40,0,0);
+	pentry.add(valor,grid);
+	grid.gridx=2;
+	grid.insets = new Insets(0,40,0,0);
+	pentry.add(delta,grid);
+	grid.gridx=3;
+	grid.insets = new Insets(0,50,0,0);
+	pentry.add(erro,grid);
+	grid.gridx=0;
+	grid.gridy++;
+	grid.gridwidth=4;
+	grid.insets = new Insets(7,0,0,0);
+	pentry.add(b5,grid);
+	grid.gridwidth=1;
+	b5.setPreferredSize(new Dimension(150,17));
+	b5.addActionListener( new ActionListener() {
+	  
+	  @Override
+	  public void actionPerformed (ActionEvent e) {
+		
+		double temp=0;
+		  
+		if (x.getText().length()==0) {
+			
+		  JOptionPane.showMessageDialog(warning,"Preencha todos os campos","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
+		  return;
+		  
+		}
+		
+		else if (x.getText().length()>0) { 
+		  
+		  try {
+			
+			temp=Double.parseDouble( x.getText().replace(",",".") );
+			  
+		  }catch (Exception ex) {
+		    
+		    JOptionPane.showMessageDialog(warning,"Valor inválido","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
+		    return;
+		      
+		  }
+		  
+		}
+		
+		temp=Double.parseDouble( x.getText().replace(",",".") );
+		fazPainel3();
+		jan.pack();
+		  
+	  }
+	  
+	});
+	  
+  }
+  
+  //Cria o segundo painel de entrada do item
+  public void fazPainel3 () {
+	
+	int i;
+	
+	aux=(int) nf.getValue();
+	fnview = new JPanel[aux];
+	fnvalue = new JTextArea[aux];
+	for (i=0;i<aux;i++) fnview[i]=new JPanel(new BorderLayout());
+	for (i=0;i<aux;i++) fnvalue[i]=new JTextArea(1,39);
+	for (i=0;i<aux;i++) {
+		  
+	  fnview[i].add(new JLabel ("f"+sb.charAt(i+1)+" = "),BorderLayout.WEST);
+	  fnview[i].add(fnvalue[i],BorderLayout.EAST);  
+		  
+	}
+	pentry2.removeAll();
+	grid.gridx=0;
+	grid.gridy=0;
+	grid.insets=new Insets(2,0,2,0);
+    for (i=0;i<aux;i++) {
+		
+	  pentry2.add(fnview[i],grid);
+	  grid.gridy++;
+		  
+	}
+	grid.insets=new Insets(5,0,0,0);
+	pentry2.add(b6,grid);
+	b6.setPreferredSize(new Dimension(250,17));
+	b6.addActionListener( new ActionListener() {
+	  
+	  @Override
+	  public void actionPerformed (ActionEvent e) {
+		
+		// Checar se funçoes são válidas antes
+		System.out.println("Opa");
+		  
+	  }
+	  
+	});
+	
+	add(pentry2,BorderLayout.CENTER);
+	  
+  }
+  
+}
+
+//Classe do item raiz de função em um intervalo 
 class Raiz extends Completa {
   
   JPanel valuea = new JPanel(new BorderLayout()); // Painel que representa o ponto a
   JTextArea pa = new JTextArea(1,5); //Recebe o valor do ponto a
   JPanel valueb = new JPanel(new BorderLayout()); // Painel que representa o ponto b 
   JTextArea pb = new JTextArea(1,5); //Recebe o valor do ponto b
+  JPanel valued = new JPanel(new BorderLayout()); // Painel que representa o delta 
+  JTextArea pd = new JTextArea(1,5); //Recebe o valor do delta
   JButton b4 = new JButton ("Checar Intervalo"); // Anexa a próxima parte do programa e calcula o número de intervalos com raiz
   int intervalos=0; // Guarda o numero de intervlos com raiz
   
+  JPanel info = new JPanel(new BorderLayout());
   String[] metodos = {"Divisão ao Meio","Cordas","Newton","Cordas Modificado","Newton Modificado"}; // Contém o nome dos metodos de calculo de raiz
   JComboBox<String> jcbox = new JComboBox <> (metodos); // Contém os metodos de calculo de raiz
   int metodo=0; // metodo utilizado efeteivamente no calculo
+  boolean raizes=true;
   String[] colunas = {"a","b","Raiz"}; // Contém o nome das colunas da tabelas
-  Vector<BigDecimal> x1 = new Vector<>(); // Contém o valor de cada ponto a
-  Vector<BigDecimal> x2 = new Vector<>(); // Contém o valor de cada ponto b
   Object[][] data; // Contém os dados mostrados na tabela
+  DecimalFormat format = new DecimalFormat("0.000");
   ButtonColumn buttonColumn; // Instancia da classe que cria os botões na tabela
   boolean[] calculado;
   JTable table; // Tabela que mostra os intervalos
   JScrollPane jsp; // Contém a tabela
   
   //Cria a interface inicial de recepção de dados fazendo algumas modificações
+  // Trocar erro por delta x da busca uniforme e colocar erro ao lado do jcombobx de metodo (eh la que vai ser usado)
   Raiz (JFrame j) {
 		
 	super(j);
 	
+	
 	pentry.removeAll();
+	sb.appendCodePoint(0X0394);
 	valuea.add(new JLabel("a ="),BorderLayout.WEST);
 	valuea.add(pa,BorderLayout.EAST);
 	valueb.add(new JLabel("b ="),BorderLayout.WEST);
 	valueb.add(pb,BorderLayout.EAST);
+	valued.add(new JLabel(sb.charAt(sb.length()-1)+"x ="),BorderLayout.WEST);
+	valued.add(pd,BorderLayout.EAST);
 	grid.gridx=0;
 	grid.gridy=0;
 	grid.gridwidth=4;
@@ -551,16 +717,16 @@ class Raiz extends Completa {
 	pentry.add(func,grid);
 	grid.gridwidth=1;
 	grid.gridy++;
-	grid.insets = new Insets(5,14,0,0);
+	grid.insets = new Insets(5,13,0,0);
 	pentry.add(valuea,grid);
 	grid.gridx++;
-	grid.insets = new Insets(5,5,0,0);
+	grid.insets = new Insets(5,15,0,0);
 	pentry.add(valueb,grid);
 	grid.gridx++;
-	grid.insets = new Insets(5,18,0,0);
-	pentry.add(erro,grid);
+	grid.insets = new Insets(5,15,0,0);
+	pentry.add(valued,grid);
 	grid.gridx++;
-	grid.insets = new Insets(5,26,0,0);
+	grid.insets = new Insets(5,32,0,0);
 	pentry.add(b4,grid);
 	b4.setPreferredSize(new Dimension(150,17));
 	b4.addActionListener (new ActionListener () {
@@ -568,7 +734,7 @@ class Raiz extends Completa {
 	  @Override
 	  public void actionPerformed (ActionEvent e) {
 		
-		double temp=0;
+		double temp=0,temp2=0,temp3=0;
 		  
 		if (f.getText().length()==0||pa.getText().length()==0||pb.getText().length()==0) {
 			
@@ -582,7 +748,8 @@ class Raiz extends Completa {
 		  try {
 			
 			temp=Double.parseDouble( pa.getText().replace(",",".") );
-			temp=Double.parseDouble( pb.getText().replace(",",".") );
+			temp2=Double.parseDouble( pb.getText().replace(",",".") );
+			temp3=Double.parseDouble( pd.getText().replace(",",".") );
 			  
 		  }catch (Exception ex) {
 		    
@@ -603,11 +770,33 @@ class Raiz extends Completa {
 		  
 		}
 		
-		//mtd.raizBusca(f,,b);
-		intervalos=5;
-		data = new Object[intervalos][3];  
+		temp=Double.parseDouble( pa.getText().replace(",",".") );
+	    temp2=Double.parseDouble( pb.getText().replace(",",".") );
+	    temp3=Double.parseDouble( pd.getText().replace(",",".") );
+		
+		if (temp>=temp2) {
+		  
+		  JOptionPane.showMessageDialog(warning,"Intervalo Inválido","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
+		  return;
+		  
+	    }
+	    
+	    else if (temp3>temp2-temp||temp3<=0.00009) {
+		  
+		  JOptionPane.showMessageDialog(warning,sb.charAt(sb.length()-1)+"x Inválido","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
+		  return;
+		  	
+		}
+		
+		mtd=new Metodos();
+		mtd.raizBusca(f.getText(),temp,temp2,temp3);
+		intervalos=	mtd.info1.size();
+		data = new Object[intervalos][3];
+		if (intervalos==0) raizes=false;
+		else raizes=true;
 		done();
 		jan.pack();
+		repaint();
 		  	
 	  }
 	     
@@ -620,17 +809,24 @@ class Raiz extends Completa {
      
     int i;
     
-    add(jcbox,BorderLayout.CENTER);
+    info.add(jcbox,BorderLayout.WEST);
+    info.add(erro,BorderLayout.EAST);
+    add(info,BorderLayout.CENTER);
     jcbox.addActionListener(new ActionListener () {
 	 	
 	  @Override
       public void actionPerformed(ActionEvent e) {
 		 
-        System.out.println(jcbox.getSelectedIndex());
+        metodo=jcbox.getSelectedIndex();
         
       }
       
     }); 
+    jcbox.setPreferredSize(new Dimension(365,20));
+    
+    if (((BorderLayout)this.getLayout()).getLayoutComponent(BorderLayout.SOUTH)!=null) 
+		  
+      this.remove(((BorderLayout)this.getLayout()).getLayoutComponent(BorderLayout.SOUTH));
     
     calculado = new boolean[intervalos];
 	
@@ -642,8 +838,8 @@ class Raiz extends Completa {
     
     for (i=0;i<intervalos;i++) {
 	  
-	  data[i][0] = new BigDecimal(i);
-	  data[i][1] = new BigDecimal(i);
+	  data[i][0] = format.format(mtd.info1.get(i).doubleValue());
+	  data[i][1] = format.format(mtd.info2.get(i).doubleValue());
 	  data[i][2] = "Calcular";
 	  	
 	}
@@ -699,16 +895,19 @@ class Raiz extends Completa {
     //A ação realizada pelos botões do jtable
     Action intervalo = new AbstractAction() {
       
-      public void actionPerformed(ActionEvent e){
+      public void actionPerformed(ActionEvent ae){
 		  
-        JTable table = (JTable)e.getSource();
-        int modelRow = Integer.valueOf( e.getActionCommand() );
-        System.out.println("Linha: "+modelRow);
-        //modelRow = index do vector com valor de interesse
-        //if (!metodo)
-        //else if (metodo==1)
-        data[modelRow][2]=modelRow+"";
-        calculado[modelRow]=true;
+		double value=0;
+		double temp=0,temp2=0;
+		
+        JTable table = (JTable)ae.getSource();
+        int linha = Integer.valueOf( ae.getActionCommand() );
+        temp=Double.parseDouble( data[linha][0].toString().replace(",",".") );
+        temp2=Double.parseDouble( data[linha][1].toString().replace(",",".") );
+        if (metodo==0) value = mtd.raizBissecao(f.getText(),temp,temp2,(Double)e.getValue()); 
+        else if (metodo==1) value = mtd.raizCordas(f.getText(),temp,temp2,(Double)e.getValue());
+        data[linha][2]=value+"";
+        calculado[linha]=true;
         repaint();
          
       }
@@ -717,19 +916,21 @@ class Raiz extends Completa {
     
     buttonColumn = new ButtonColumn(table, intervalo, 2);
     jsp = new JScrollPane (table);
-    add(jsp,BorderLayout.SOUTH);
-    jsp.setPreferredSize(new Dimension (300,80));
+    
+    if (raizes) 
+      
+      add(jsp,BorderLayout.SOUTH);
+      
+    else {
+      
+      add(new JLabel("Nenhuma Raiz Encontrada"),BorderLayout.SOUTH);
+      
+    }
+    
+    if(intervalos<5) jsp.setPreferredSize(new Dimension (300,20*(intervalos+1)));
+    else jsp.setPreferredSize(new Dimension (300,22*4));
      
   }
-  
-  //Guarda os dados recebidos em cada respectivo vector
-  public void novoDado(BigDecimal a,BigDecimal b) {
-     
-    x1.add(a);
-    x2.add(b);
-       
-  }
-  
     
 }
 
@@ -926,6 +1127,411 @@ class ButtonColumn extends AbstractCellEditor implements TableCellRenderer, Tabl
 
 }
 
+//Classe base dos itens da aba de sistemas
+class Sistemas extends JPanel {
+  
+  String[] itens = {"Sistema","Determinante","Inversa"}; //Vetor que guarda os itens do combo box
+  JComboBox<String> jcb = new JComboBox <> (itens); //Combo box
+  JPanel pmain = new JPanel(new CardLayout()); //Painel que cuida dos itens do combo box
+  JFrame jan; //Janela principal
+  CardLayout cl; // Instância do layout que cuida dos itens do combo box
+  SistemaLinear sl;
+  //Itens receberão essa instância ao inves de jan, para reaproveitar campos ja preenchidos
+  
+  //Cria a estrutura para acessar os itens da aba
+  Sistemas (JFrame j) {
+    
+    jan=j;
+    setLayout (new BorderLayout(10,5));
+    jcb.addActionListener(new ActionListener () {
+	 	
+	  @Override
+      public void actionPerformed(ActionEvent e) {
+		 
+        JComboBox cb = (JComboBox)e.getSource();
+        String painel = (String)cb.getSelectedItem();
+        cl.show(pmain,painel);
+        jan.pack();
+        
+      }
+      
+    });  
+    cl = (CardLayout)(pmain.getLayout());
+	add(jcb,BorderLayout.NORTH);
+	sl = new SistemaLinear(jan);
+	pmain.add(sl,"Sistema");
+	add(pmain,BorderLayout.CENTER);
+	  
+  }
+  
+}
+
+//Classe do item sistema
+// Colocar vetor x e b em otro painel pra facilitar que sejam removidos
+class SistemaLinear extends JPanel {
+	
+  JFrame jan;
+  StringBuilder sb = new StringBuilder(); // Guarda caracteres especias a serem utilizados ao longo do programa
+  JPanel pentry = new JPanel (new GridBagLayout()); // Painel de entrada 1
+  GridBagConstraints gbc = new GridBagConstraints(); // Variavel de controle do layout
+  
+  JPanel variaveis = new JPanel(new BorderLayout(1,0)); // Painel que representa o numero de variaveis 
+  JSpinner tamanho = new JSpinner(new SpinnerNumberModel (3,3,20,1)); //Recebe o numero de variaveis
+  JPanel erro = new JPanel (new BorderLayout()); // Painel que representa o erro
+  JSpinner e = new JSpinner(new SpinnerNumberModel (0.01,0.001,0.1,0.001)); // Determina o valor do erro
+  JPanel iteracoes = new JPanel (new BorderLayout()); // Painel que o numero de iterações
+  JSpinner it = new JSpinner(new SpinnerNumberModel (10,10,100,1)); // Determina o numero de iterações
+  JPanel vazios = new JPanel (new BorderLayout()); // Painel que representa o numero que preencherá espaços vazios
+  JTextArea vaz = new JTextArea(1,3); // Recebe o numero que preencherá espaços vazios
+  JButton b = new JButton ("Continuar"); // Coloca a segunda entrada
+  JFrame warning; // Janela de aviso
+  boolean boo = true; // Controla o que aparece ou não dependendo do item
+  
+  JPanel pentry2 = new JPanel (new GridBagLayout()); // Painel de entrada 2
+  int aux; // Guarda o tamanho da matriz impressa
+  JTextArea[][] campos; // Campos da matriz
+  
+  JTextArea[] valorx; // Campos do vetor x
+  JTextArea[] valorb; // Campos do vetor b
+  
+  JPanel pentry3 = new JPanel (new GridBagLayout()); // Painel de entrada 3
+  String[] diretos = {"Guass Simples","Gauss Pivotamento Parcial","Gauss Pivotamento Total","Gauss Compacto","Decomposição L.U.","Cholesky"}; // metodos diretos
+  JComboBox<String> dir = new JComboBox <> (diretos); // combo box dos metodos diretos
+  String[] iterativos = {"Jacobi-Richardson","Gauss-Seidel"}; // metodos iterativos
+  JComboBox<String> iter = new JComboBox <> (iterativos); // combo box dos metodos iterativos
+  ButtonGroup group = new ButtonGroup(); // Grupo dos botões de rádio
+  JRadioButton mododir = new JRadioButton("Métodos Diretos"); // Botão que seleciona métodos diretos
+  JRadioButton modoiter = new JRadioButton("Métodos Iterativos"); // Botão que seleciona métodos iterativos
+  JButton calcular = new JButton ("Calcular"); // Botão para calcular o desejado
+  JButton limpar = new JButton ("Limpar Tudo"); // Botão para limpar a matriz
+  JCheckBox modificar = new JCheckBox("Modificar Matriz Inicial (Você perderá o preenchimento)"); // Checkbox que habilita ou não a mudança da matriz, ou seja, se para calcular o método ela for triangularizada ela aparecerá assim ao usuário
+  boolean modificado=false; // define se a opção acima está ativada ou não
+  
+  //Cria a interface para recepção dos dados necessários
+  SistemaLinear (JFrame j) {
+	  
+	int i;
+	  
+	jan=j;
+	setLayout (new BorderLayout(0,10));
+	sb.appendCodePoint(0X2070);
+	sb.appendCodePoint(0X03B5);
+	((DefaultEditor) tamanho.getEditor()).getTextField().setEditable(false);
+	((DefaultEditor) it.getEditor()).getTextField().setEditable(false);
+	((DefaultEditor) e.getEditor()).getTextField().setEditable(false);
+	variaveis.add(new JLabel("N"+sb.charAt(0)+" de Variáveis: "),BorderLayout.WEST);
+	variaveis.add(tamanho,BorderLayout.EAST);
+	iteracoes.add(new JLabel("N"+sb.charAt(0)+" Iterações"),BorderLayout.WEST);
+	iteracoes.add(it,BorderLayout.EAST);
+	vazios.add(new JLabel("Preencher Vazio: "),BorderLayout.WEST);
+	erro.add(new JLabel(sb.charAt(1)+" ="),BorderLayout.WEST);
+	erro.add(e,BorderLayout.EAST);
+	vazios.add(vaz,BorderLayout.EAST);
+	gbc.gridx=0;
+	gbc.gridy=0;
+	gbc.anchor=gbc.WEST;
+	gbc.insets = new Insets (5,0,0,0);
+	pentry.add(variaveis,gbc);
+	gbc.gridx=1;
+	gbc.insets = new Insets (5,18,0,18);
+	pentry.add(iteracoes,gbc);
+	gbc.gridx=2;
+	gbc.insets = new Insets (5,14,0,0);
+	pentry.add(erro,gbc);
+	gbc.gridx=0;
+	gbc.gridy=1;
+	gbc.gridwidth=2;
+	gbc.insets = new Insets (5,0,0,0);
+	pentry.add(vazios,gbc);
+	gbc.gridx=2;
+	gbc.gridwidth=1;
+	gbc.insets = new Insets (5,0,0,0);
+	pentry.add(b,gbc);
+	b.setPreferredSize(new Dimension(110,17));
+	add(pentry,BorderLayout.NORTH);
+	
+	b.addActionListener (new ActionListener (){
+	  
+	  @Override
+	  public void actionPerformed (ActionEvent e) {
+		
+		double temp=0;
+        
+        if (vaz.getText().length()==0) {
+			
+		  JOptionPane.showMessageDialog(warning,"Preencha todos os campos","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
+		  return;
+		  
+		}
+		
+		else { 
+		  
+		  try {
+			
+			temp=Double.parseDouble( vaz.getText().replace(",",".") );
+			  
+		  }catch (Exception ex) {
+		    
+		    JOptionPane.showMessageDialog(warning,"Valor de preenchimento inválido","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
+		    return;
+		      
+		  }
+		  
+		}
+        
+        pentry2.removeAll();
+        pentry3.removeAll();
+        matriz();
+        if (boo) { 
+		  
+		  matriz2();
+          entradaFinal();
+        
+	    }
+        jan.pack();
+        
+      }
+	  
+	});
+	
+  }
+  
+  //Cria a matriz para ser preenchida
+  public void matriz() {
+	
+	int i,j;
+	
+	aux = (int) tamanho.getValue();
+	campos = new JTextArea[aux][aux];
+	
+	for (i=0;i<aux;i++)
+	  for (j=0;j<aux;j++) {
+	  
+	    campos[i][j] = new JTextArea(1,3);
+	    campos[i][j].setBorder(BorderFactory.createLineBorder(new Color(0,0,0)));
+	    campos[i][j].setDocument(new PlainDocument() {
+          
+          @Override
+          public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
+            
+            if (str == null || getLength() >= 4) return;
+            
+            else if (str.length()>=4) str=str.substring(0,4);
+ 
+            super.insertString(offs, str, a);
+           
+          }
+          
+          @Override
+          public void replace(int offset,int length,String text,AttributeSet attrs) throws BadLocationException {
+			
+			insertString(offset,text,attrs);
+			  
+		  }
+
+        });
+	    
+	  }
+	
+	gbc.anchor=gbc.CENTER;  
+	gbc.insets = new Insets(0,0,0,0);
+	
+	for (i=0;i<aux+1;i++)
+	  for (j=0;j<aux+1;j++) {
+	    
+	    gbc.gridx=j;
+	    gbc.gridy=i;
+	    
+	    if (i==0&&j==0) pentry2.add(new JLabel("   A   "),gbc);
+	    
+	    else if (i==0) pentry2.add(new JLabel(j+""),gbc);
+	    
+	    else if (j==0) pentry2.add(new JLabel(i+""),gbc);
+	    
+	    else pentry2.add(campos[i-1][j-1],gbc);
+	    
+	  }
+	  
+	add(pentry2,BorderLayout.CENTER);
+	  
+  }
+  
+  //Cria os vetores x e b para serem preenchidos
+  public void matriz2() {
+	
+	int i,j;
+	
+	aux = (int) tamanho.getValue();
+	valorx = new JTextArea[aux];
+	valorb = new JTextArea[aux];
+	
+	for (i=0;i<aux;i++) {
+	  
+	  valorx[i] = new JTextArea(1,3);
+	  valorx[i].setBorder(BorderFactory.createLineBorder(new Color(0,0,0)));
+	  valorx[i].setDocument(new PlainDocument() {
+          
+        @Override
+        public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
+            
+          if (str == null || getLength() >= 4) return;
+            
+          else if (str.length()>=4) str=str.substring(0,4);
+ 
+          super.insertString(offs, str, a);
+           
+        }
+          
+        @Override
+        public void replace(int offset,int length,String text,AttributeSet attrs) throws BadLocationException {
+			
+	      insertString(offset,text,attrs);
+			  
+		}
+
+      });
+	  
+	  valorb[i] = new JTextArea(1,3);
+	  valorb[i].setBorder(BorderFactory.createLineBorder(new Color(0,0,0)));
+	  valorb[i].setDocument(new PlainDocument() {
+          
+        @Override
+        public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
+            
+          if (str == null || getLength() >= 4) return;
+            
+          else if (str.length()>=4) str=str.substring(0,4);
+ 
+          super.insertString(offs, str, a);
+           
+        }
+          
+        @Override
+        public void replace(int offset,int length,String text,AttributeSet attrs) throws BadLocationException {
+			
+	      insertString(offset,text,attrs);
+			  
+		}
+
+      });
+	    
+	}
+	
+	gbc.anchor=gbc.CENTER;  
+	gbc.insets = new Insets(10,0,0,0);
+	gbc.gridy++;
+	
+	for (i=0;i<aux+1;i++) {
+	    
+	  gbc.gridx=i;
+	    
+	  if (i==0) pentry2.add(new JLabel("x"),gbc);
+	    
+	  else pentry2.add(valorx[i-1],gbc);
+	    
+	}
+	
+	gbc.gridy++;
+	
+	for (i=0;i<aux+1;i++) {
+	    
+	  gbc.gridx=i;
+	    
+	  if (i==0) pentry2.add(new JLabel("b"),gbc);
+	    
+	  else pentry2.add(valorb[i-1],gbc);
+	    
+	}
+	  
+  }
+  
+  //Cria as opções finais para serem escolhidas pelo usuário
+  public void entradaFinal() {
+    
+    dir.setPreferredSize(new Dimension(250,18));
+    iter.setPreferredSize(new Dimension(250,18));
+    iter.setEnabled(false);
+    dir.setEnabled(true);
+    mododir.setActionCommand("mododir");
+    mododir.setSelected(true);
+    mododir.addActionListener(new ActionListener() {
+	  
+	  @Override
+	  public void actionPerformed (ActionEvent e) {
+		
+		dir.setEnabled(true);
+		iter.setEnabled(false);
+		  
+	  }
+	  	
+	});
+    modoiter.setActionCommand("modoiter");
+    modoiter.addActionListener(new ActionListener() {
+	  
+	  @Override
+	  public void actionPerformed (ActionEvent e) {
+		
+		iter.setEnabled(true);
+		dir.setEnabled(false);
+		  
+	  }
+	  	
+	});
+	
+	group.add(mododir);
+    group.add(modoiter);
+    
+    calcular.setPreferredSize(new Dimension(100,17));
+    limpar.setPreferredSize(new Dimension(130,17));
+    
+    if (modificado) modificar.setSelected(true);
+    modificar.addItemListener(new ItemListener() {
+	  
+	  @Override
+	  public void itemStateChanged(ItemEvent e) {
+        
+        if(modificado) modificado=false;
+        
+        else modificado=true;
+        
+      }
+	  
+	});
+    
+    gbc.gridx=0;
+    gbc.gridy=0;
+    gbc.insets = new Insets(0,0,0,21);
+    pentry3.add(mododir,gbc);
+    gbc.gridx=1;
+    gbc.insets = new Insets(0,0,0,0);
+    pentry3.add(dir,gbc);
+    gbc.gridx=0;
+    gbc.gridy=1;
+    gbc.insets = new Insets(0,0,0,5);
+    pentry3.add(modoiter,gbc);
+    gbc.gridx=1;
+    gbc.insets = new Insets(0,0,0,0);
+    pentry3.add(iter,gbc);
+    gbc.gridx=0;
+    gbc.gridy=2;
+    gbc.insets = new Insets(5,0,0,58);
+    pentry3.add(calcular,gbc);
+    gbc.gridx=1;
+    gbc.insets = new Insets(5,118,0,0);
+    pentry3.add(limpar,gbc);
+    gbc.gridx=0;
+    gbc.gridy=3;
+    gbc.gridwidth=2;
+    gbc.insets = new Insets(5,0,0,0);
+    pentry3.add(modificar,gbc);
+    gbc.gridwidth=1;
+    
+    add(pentry3,BorderLayout.SOUTH);
+	
+  }
+  
+}
+
 //Classe que contém a main e controla o painel com abas que vai para cada método
 class Metodos {
   
@@ -934,7 +1540,10 @@ class Metodos {
   JFrame warning; // Janela de aviso
   JFrame jan = new JFrame ("Metodos"); // Janela principal
   Derivada der;
+  Sistemas sis;
   boolean ok=true;
+  Vector<BigDecimal> info1 = new Vector<>();
+  Vector<BigDecimal> info2 = new Vector<>();
   
   //Cria as abas
   public static void main(String[] args) {
@@ -942,11 +1551,14 @@ class Metodos {
 	Metodos mtd = new Metodos();
 	JFrame jan = new JFrame ("Metodos");
 	mtd.der = new Derivada(jan);
+	mtd.sis = new Sistemas(jan);
 	  
     JTabbedPane tp = new JTabbedPane (); // Contém as abas que separam as áreas do programa
     ImageIcon icon = new ImageIcon("Derivada_v2.jpg"); // Icone da aba de derivada
+    ImageIcon icon2 = new ImageIcon("Sistemas_v2.png"); // Icone da aba de sistemas
     
     tp.addTab("D & R",icon,mtd.der,"Deriva e Acha Raízes");
+    tp.addTab("S. L.",icon2,mtd.sis,"Calcula Sistemas, além de Determinantes e Inversas de Matrizes");
     jan.add(tp);
     jan.pack();
     jan.setResizable(false);
@@ -1338,10 +1950,140 @@ class Metodos {
 	  
   }
   
-  public void raizBusca (String f,int a,int b) {
+  //Busca pequenos intevalos que tenham raízes
+  public void raizBusca (String f,double a,double b,double delta) {
 	
+	double p,q;
+	double buffer=Double.MAX_VALUE;
+    a = Math.round(a*100)/100.0d;
+    b = Math.round(b*100)/100.0d;
 	
+	p=a;
+	q=p+delta;
+	q = Math.round(q*1000)/1000.0d;
+	
+	do {
+      
+      if (funcao(f,p)*funcao(f,q)<=0.0001&&buffer!=p) {
+		
+		p = Math.round(p*1000)/1000.0d;  
+		q = Math.round(q*1000)/1000.0d;
+		info1.add(new BigDecimal(p));
+		info2.add(new BigDecimal(q));
+		buffer=q;
+		  
+	  }
+      
+      p=q;
+      q+=delta;
+      
+    } while (q<b);
 	  
   }
+  
+  //Encontra a raiz pelo método da bisseção
+  public double raizBissecao (String f,double a,double b,double erro) {
+    
+    int i;
+	double p;
+	double temp;
+	double f1,f2,f3;
+	double resp=-30;
+	boolean boo=true;
+    
+    p=(a+b)/2;
+    p = Math.round(p*1000)/1000.0d;
+	
+	for (i=0;i<100&&boo;i++) {
+      
+      f1=funcao(f,a);
+      f1 = Math.round(f1*1000)/1000.0d;
+      f2=funcao(f,p);
+      f2 = Math.round(f2*1000)/1000.0d;
+      f3=funcao(f,b);
+      f3 = Math.round(f3*1000)/1000.0d;
+      
+      if (Math.abs(f1)<erro||Math.abs(b-a)<erro) {
+		 
+	    boo = false;
+	    resp = a;
+	   	 
+	  }
+      
+      else if (Math.abs(f2)<erro) {
+		 
+	    boo = false;
+	    resp = p;
+	   	 
+	  }
+	  
+	  else if (Math.abs(f3)<erro) {
+		 
+	    boo = false;
+	    resp = b;
+	   	 
+	  }
+      
+      p=(a+b)/2;
+      p = Math.round(p*1000)/1000.0d;
+      
+    }
+    
+    return resp;
+    
+  }
+  
+  //Encontra a raiz pelo método da bisseção
+  public double raizCordas (String f,double a,double b,double erro) {
+    
+    int i;
+	double p;
+	double temp;
+	double f1,f2,f3;
+	double resp=-30;
+	boolean boo=true;
+    
+    p=(a*funcao(f,b)-b*funcao(f,a))/(funcao(f,b)-funcao(f,a));
+    p = Math.round(p*1000)/1000.0d;
+	
+	for (i=0;i<100&&boo;i++) {
+      
+      f1=funcao(f,a);
+      f1 = Math.round(f1*1000)/1000.0d;
+      f2=funcao(f,p);
+      f2 = Math.round(f2*1000)/1000.0d;
+      f3=funcao(f,b);
+      f3 = Math.round(f3*1000)/1000.0d;
+      
+      if (Math.abs(f1)<erro||Math.abs(b-a)<erro) {
+		 
+	    boo = false;
+	    resp = a;
+	   	 
+	  }
+      
+      else if (Math.abs(f2)<erro) {
+		 
+	    boo = false;
+	    resp = p;
+	   	 
+	  }
+	  
+	  else if (Math.abs(f3)<erro) {
+		 
+	    boo = false;
+	    resp = b;
+	   	 
+	  }
+      
+      p=(a*funcao(f,b)-b*funcao(f,a))/(funcao(f,b)-funcao(f,a));
+      p = Math.round(p*1000)/1000.0d;
+      
+    }
+    
+    return resp;
+    
+  }
+  
   
 }
