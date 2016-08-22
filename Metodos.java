@@ -1132,12 +1132,10 @@ class Sistemas extends JPanel {
   
   String[] itens = {"Sistema","Determinante","Inversa"}; //Vetor que guarda os itens do combo box
   JComboBox<String> jcb = new JComboBox <> (itens); //Combo box
-  JPanel pmain = new JPanel(new CardLayout()); //Painel que cuida dos itens do combo box
   JFrame jan; //Janela principal
-  CardLayout cl; // Instância do layout que cuida dos itens do combo box
-  SistemaLinear sl;
-  //Itens receberão essa instância ao inves de jan, para reaproveitar campos ja preenchidos
+  SisDetInv sdi;
   
+  //Nesse combo box fazer transição do painel do sul
   //Cria a estrutura para acessar os itens da aba
   Sistemas (JFrame j) {
     
@@ -1149,26 +1147,68 @@ class Sistemas extends JPanel {
       public void actionPerformed(ActionEvent e) {
 		 
         JComboBox cb = (JComboBox)e.getSource();
-        String painel = (String)cb.getSelectedItem();
-        cl.show(pmain,painel);
+        sdi.opc=cb.getSelectedIndex();
+        
+        if (sdi.opc==0) {
+			
+		  sdi.e.setEnabled(true);
+		  sdi.it.setEnabled(true);
+		  sdi.todos=true;
+			  
+		}
+		  
+	    else if (sdi.opc==1) {
+			
+		  sdi.e.setEnabled(false);
+		  sdi.it.setEnabled(false);
+		  sdi.todos=false;
+			  
+		}
+		  
+		else if (sdi.opc==2) {
+			
+		  sdi.e.setEnabled(true);
+	      sdi.it.setEnabled(true);
+	      sdi.todos=false;
+			  
+		}
+        
+        if (!sdi.pressed) return;
+		
+        else {
+		  
+		  sdi.pentry3.removeAll();
+		  sdi.pvetores.removeAll();
+		  sdi.pextras.removeAll();
+		  
+		  if (sdi.opc==0) {
+			
+			sdi.matriz2();
+			sdi.entradaFinal();
+			  
+		  }
+		  
+		  else if (sdi.opc==1) sdi.entradaAlternativa(true);
+		  
+		  else if (sdi.opc==2) sdi.entradaAlternativa(false);
+		  
+		}
         jan.pack();
         
       }
       
-    });  
-    cl = (CardLayout)(pmain.getLayout());
+    });
+    
 	add(jcb,BorderLayout.NORTH);
-	sl = new SistemaLinear(jan);
-	pmain.add(sl,"Sistema");
-	add(pmain,BorderLayout.CENTER);
+	sdi = new SisDetInv(jan);
+	add(sdi,BorderLayout.CENTER);
 	  
   }
   
 }
 
 //Classe do item sistema
-// Colocar vetor x e b em otro painel pra facilitar que sejam removidos
-class SistemaLinear extends JPanel {
+class SisDetInv extends JPanel {
 	
   JFrame jan;
   StringBuilder sb = new StringBuilder(); // Guarda caracteres especias a serem utilizados ao longo do programa
@@ -1185,30 +1225,46 @@ class SistemaLinear extends JPanel {
   JTextArea vaz = new JTextArea(1,3); // Recebe o numero que preencherá espaços vazios
   JButton b = new JButton ("Continuar"); // Coloca a segunda entrada
   JFrame warning; // Janela de aviso
-  boolean boo = true; // Controla o que aparece ou não dependendo do item
+  int opc = 0; // Controla o que aparece ou não dependendo do item
+  boolean pressed=false; // Se o botão continuar foi apertado ou não
   
   JPanel pentry2 = new JPanel (new GridBagLayout()); // Painel de entrada 2
   int aux; // Guarda o tamanho da matriz impressa
   JTextArea[][] campos; // Campos da matriz
   
+  JPanel pentry3 = new JPanel (new BorderLayout(0,10)); // Painel de entrada 3
+  JPanel pvetores = new JPanel (new GridBagLayout()); // Painel dos vetores
   JTextArea[] valorx; // Campos do vetor x
   JTextArea[] valorb; // Campos do vetor b
-  
-  JPanel pentry3 = new JPanel (new GridBagLayout()); // Painel de entrada 3
-  String[] diretos = {"Guass Simples","Gauss Pivotamento Parcial","Gauss Pivotamento Total","Gauss Compacto","Decomposição L.U.","Cholesky"}; // metodos diretos
+  JPanel pextras = new JPanel (new GridBagLayout()); // Painel dos vetores
+  String[] diretos = {"Gauss Simples","Gauss Pivotamento Parcial","Gauss Pivotamento Total","Gauss Compacto","Decomposição L.U.","Cholesky"}; // metodos diretos
   JComboBox<String> dir = new JComboBox <> (diretos); // combo box dos metodos diretos
   String[] iterativos = {"Jacobi-Richardson","Gauss-Seidel"}; // metodos iterativos
   JComboBox<String> iter = new JComboBox <> (iterativos); // combo box dos metodos iterativos
   ButtonGroup group = new ButtonGroup(); // Grupo dos botões de rádio
+  JPanel diraux = new JPanel (new BorderLayout(8,0));
   JRadioButton mododir = new JRadioButton("Métodos Diretos"); // Botão que seleciona métodos diretos
+  JPanel iteraux = new JPanel (new BorderLayout(0,0));
   JRadioButton modoiter = new JRadioButton("Métodos Iterativos"); // Botão que seleciona métodos iterativos
   JButton calcular = new JButton ("Calcular"); // Botão para calcular o desejado
   JButton limpar = new JButton ("Limpar Tudo"); // Botão para limpar a matriz
-  JCheckBox modificar = new JCheckBox("Modificar Matriz Inicial (Você perderá o preenchimento)"); // Checkbox que habilita ou não a mudança da matriz, ou seja, se para calcular o método ela for triangularizada ela aparecerá assim ao usuário
-  boolean modificado=false; // define se a opção acima está ativada ou não
+  JButton display = new JButton ("Original"); // Botão que seleciona a matriz mostrada no programa, original ou pós processamento
+  JPanel determ = new JPanel (new BorderLayout()); // Painel que mostra o determinante
+  JTextArea det = new JTextArea(1,3); // Guarda o valor do determinante
+  JPanel met = new JPanel (new BorderLayout()); // Painel que mostra os métodos
+  
+  int metodo=0;
+  boolean todos=true; // Controla se ambos metodos iterativos e diretos serão usados ou não
+  boolean added=false; // Controla se o listener do botão continuar foi adicionado
+  boolean added2=false; // Controla se o listener 1 do botão limpar tudo foi adicionado
+  boolean added3=false; // Controla se o listener 2 do botão limpar tudo foi adicionado
+  boolean added4=false; // Controla se os listeners do método entrada final foram adicionados
+  boolean added5=false; // Controla se os listeners do método entrada alternativa foram adicionados
+  double[][] original;  // Guarda a matriz original fornecida pelo usuário
+  double[][] processada; // Guarda a matriz resultante das operações
   
   //Cria a interface para recepção dos dados necessários
-  SistemaLinear (JFrame j) {
+  SisDetInv (JFrame j) {
 	  
 	int i;
 	  
@@ -1250,49 +1306,70 @@ class SistemaLinear extends JPanel {
 	b.setPreferredSize(new Dimension(110,17));
 	add(pentry,BorderLayout.NORTH);
 	
-	b.addActionListener (new ActionListener (){
+	if (!added) {
+	
+	  b.addActionListener (new ActionListener (){
 	  
-	  @Override
-	  public void actionPerformed (ActionEvent e) {
+	    @Override
+	    public void actionPerformed (ActionEvent e) {
 		
-		double temp=0;
+		  double temp=0;
         
-        if (vaz.getText().length()==0) {
+          if (vaz.getText().length()==0) {
 			
-		  JOptionPane.showMessageDialog(warning,"Preencha todos os campos","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
-		  return;
-		  
-		}
-		
-		else { 
-		  
-		  try {
-			
-			temp=Double.parseDouble( vaz.getText().replace(",",".") );
-			  
-		  }catch (Exception ex) {
-		    
-		    JOptionPane.showMessageDialog(warning,"Valor de preenchimento inválido","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
+		    JOptionPane.showMessageDialog(warning,"Preencha todos os campos","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
 		    return;
-		      
+		  
 		  }
+		
+		  else { 
 		  
-		}
-        
-        pentry2.removeAll();
-        pentry3.removeAll();
-        matriz();
-        if (boo) { 
+		    try {
+			
+			  temp=Double.parseDouble( vaz.getText().replace(",",".") );
+			  
+		    }catch (Exception ex) {
+		    
+		      JOptionPane.showMessageDialog(warning,"Valor de preenchimento inválido","Erro De Sintaxe",JOptionPane.ERROR_MESSAGE);
+		      return;
+		      
+		    }
 		  
-		  matriz2();
-          entradaFinal();
+		  }
         
-	    }
-        jan.pack();
+          pentry2.removeAll();
+          pvetores.removeAll();
+          pextras.removeAll();
+          pentry3.removeAll();
+          matriz();
+          if (opc==0) { 
+		  
+		    matriz2();
+            entradaFinal();
         
-      }
+	      }
+	    
+	      else if (opc==1) {
+		  
+		    entradaAlternativa(true);
+		  
+		  }
+		
+		  else if (opc==2) {
+		  
+		    entradaAlternativa(false);
+		  
+		  }
+	    
+          jan.pack();
+          pressed=true;
+        
+        }
 	  
-	});
+	  });
+	  added=true;
+	  
+    }
 	
   }
   
@@ -1303,7 +1380,99 @@ class SistemaLinear extends JPanel {
 	
 	aux = (int) tamanho.getValue();
 	campos = new JTextArea[aux][aux];
+	original = new double[aux][aux];
+	processada = new double[aux][aux];
+	display.setEnabled(false);
 	
+	for(i=0;i<aux;i++)
+	  for (j=0;j<aux;j++)
+		
+		processada[i][j]=0;
+		
+	
+	if (!added2) {
+	  
+	  calcular.addActionListener (new ActionListener() {
+	  
+	    @Override
+	    public void actionPerformed (ActionEvent e) {
+
+          int i,j;
+          double auxi;
+		      
+		  auxi=Double.parseDouble( vaz.getText().replace(",",".") );
+		    
+		  for(i=0;i<aux;i++)
+		    for (j=0;j<aux;j++) {
+		        
+		      if ((campos[i][j].getText()).length()==0) campos[i][j].setText(auxi+"");
+		      original[i][j]=Double.parseDouble( campos[i][j].getText().replace(",",".") );
+		      
+		    }
+		    
+		  display.setEnabled(true);
+        
+        }
+	  
+	  }); 
+	  display.addActionListener (new ActionListener() {
+	  
+	    @Override
+	    public void actionPerformed (ActionEvent e) {
+        
+          int i,j;
+        
+          if (((JButton)e.getSource()).getText()=="Original") {
+			
+			((JButton)e.getSource()).setText("Resultante");
+			
+			for (i=0;i<aux;i++)
+			  for (j=0;j<aux;j++) {
+				
+				campos[i][j].setText("reset123");
+				campos[i][j].setText(processada[i][j]+"");
+				  
+			  }
+			    
+			  
+		  }
+          
+          else if (((JButton)e.getSource()).getText()=="Resultante") {
+			
+			((JButton)e.getSource()).setText("Original");
+			
+			for (i=0;i<aux;i++)
+			  for (j=0;j<aux;j++) {
+				
+				campos[i][j].setText("reset123");
+				campos[i][j].setText(original[i][j]+"");
+				  
+			  }
+			  
+		  }
+        
+        }
+	  
+	  });   
+	  limpar.addActionListener (new ActionListener() {
+	  
+	    @Override
+	    public void actionPerformed (ActionEvent e) {
+        
+          int i,j;
+        
+          for(i=0;i<aux;i++)
+            for (j=0;j<aux;j++)
+          
+              campos[i][j].setText("reset123");
+        
+        }
+	  
+	  }); 
+	  added2=true;
+	  
+	}
+	  
 	for (i=0;i<aux;i++)
 	  for (j=0;j<aux;j++) {
 	  
@@ -1324,6 +1493,13 @@ class SistemaLinear extends JPanel {
           
           @Override
           public void replace(int offset,int length,String text,AttributeSet attrs) throws BadLocationException {
+			
+			if (text=="reset123") {
+			  
+			  super.replace(0,getLength(),null,attrs);
+			  return;
+			  	
+			}
 			
 			insertString(offset,text,attrs);
 			  
@@ -1365,6 +1541,30 @@ class SistemaLinear extends JPanel {
 	valorx = new JTextArea[aux];
 	valorb = new JTextArea[aux];
 	
+	
+	if (!added3) {
+	  
+	  limpar.addActionListener (new ActionListener() {
+	  
+	    @Override
+	    public void actionPerformed (ActionEvent e) {
+        
+          int i,j;
+        
+          for(i=0;i<aux;i++) {
+          
+             valorx[i].setText("reset123");
+             valorb[i].setText("reset123");
+           
+          }
+        
+        }
+	  
+	  });
+	  added3=true;
+	
+    }
+	
 	for (i=0;i<aux;i++) {
 	  
 	  valorx[i] = new JTextArea(1,3);
@@ -1384,7 +1584,14 @@ class SistemaLinear extends JPanel {
           
         @Override
         public void replace(int offset,int length,String text,AttributeSet attrs) throws BadLocationException {
-			
+		  
+		  if (text=="reset123") {
+			  
+			  super.replace(0,getLength(),null,attrs);
+			  return;
+			  	
+		  }
+		  
 	      insertString(offset,text,attrs);
 			  
 		}
@@ -1408,7 +1615,14 @@ class SistemaLinear extends JPanel {
           
         @Override
         public void replace(int offset,int length,String text,AttributeSet attrs) throws BadLocationException {
-			
+		  
+		  if (text=="reset123") {
+			  
+			  super.replace(0,getLength(),null,attrs);
+			  return;
+			  	
+		  }
+		  
 	      insertString(offset,text,attrs);
 			  
 		}
@@ -1425,9 +1639,9 @@ class SistemaLinear extends JPanel {
 	    
 	  gbc.gridx=i;
 	    
-	  if (i==0) pentry2.add(new JLabel("x"),gbc);
+	  if (i==0) pvetores.add(new JLabel("   x   "),gbc);
 	    
-	  else pentry2.add(valorx[i-1],gbc);
+	  else pvetores.add(valorx[i-1],gbc);
 	    
 	}
 	
@@ -1437,97 +1651,240 @@ class SistemaLinear extends JPanel {
 	    
 	  gbc.gridx=i;
 	    
-	  if (i==0) pentry2.add(new JLabel("b"),gbc);
+	  if (i==0) pvetores.add(new JLabel("   b   "),gbc);
 	    
-	  else pentry2.add(valorb[i-1],gbc);
+	  else pvetores.add(valorb[i-1],gbc);
 	    
 	}
+	
+	pentry3.add(pvetores,BorderLayout.NORTH);
 	  
   }
   
   //Cria as opções finais para serem escolhidas pelo usuário
   public void entradaFinal() {
     
+    if (!added4) {
+    
+      //Checar se pelo menos b ou x foi preenchido
+      calcular.addActionListener (new ActionListener() {
+	  
+	    @Override
+	    public void actionPerformed (ActionEvent e) {
+          
+          if (todos) {
+		    
+		    if ((group.getSelection()).getActionCommand()=="mododir") {
+		    
+		      if (metodo==0) System.out.println("dir 0");
+		    
+		      else if (metodo==1) System.out.println("dir 1");
+		    
+		      else if (metodo==2) System.out.println("dir 2");
+		    
+		      else if (metodo==3) System.out.println("dir 3");
+		    
+		      else if (metodo==4) System.out.println("dir 4");
+		    
+		      else if (metodo==5) System.out.println("dir 5");
+		    
+		    }
+		  
+		    
+		    else if ((group.getSelection()).getActionCommand()=="modoiter") {
+		    
+		      if (metodo==0) System.out.println("iter 0");
+		    
+		      else if (metodo==1) System.out.println("iter 1");
+		    
+		  }
+		  
+		  }
+        
+        }
+	  
+	  });	  
+	  dir.addActionListener(new ActionListener () {
+	 	
+	    @Override
+        public void actionPerformed(ActionEvent e) {
+		 
+          metodo=((JComboBox)e.getSource()).getSelectedIndex();
+        
+        }
+      
+      });    
+      iter.addActionListener(new ActionListener () {
+	 	
+	    @Override
+        public void actionPerformed(ActionEvent e) {
+		 
+          metodo=((JComboBox)e.getSource()).getSelectedIndex();
+        
+        }
+      
+      });
+      mododir.addActionListener(new ActionListener() {
+	  
+	    @Override
+	    public void actionPerformed (ActionEvent e) {
+		
+		  metodo=dir.getSelectedIndex();
+		  dir.setEnabled(true);
+		  iter.setEnabled(false);
+		  
+	    }
+	  	
+	  });
+      modoiter.addActionListener(new ActionListener() {
+	  
+	    @Override
+	    public void actionPerformed (ActionEvent e) {
+		
+	  	  metodo=iter.getSelectedIndex();
+	  	  iter.setEnabled(true);
+		  dir.setEnabled(false);
+		  
+	    }
+	  	
+	  });
+
+      added4=true;
+    
+    } 
     dir.setPreferredSize(new Dimension(250,18));
     iter.setPreferredSize(new Dimension(250,18));
     iter.setEnabled(false);
     dir.setEnabled(true);
     mododir.setActionCommand("mododir");
     mododir.setSelected(true);
-    mododir.addActionListener(new ActionListener() {
-	  
-	  @Override
-	  public void actionPerformed (ActionEvent e) {
-		
-		dir.setEnabled(true);
-		iter.setEnabled(false);
-		  
-	  }
-	  	
-	});
     modoiter.setActionCommand("modoiter");
-    modoiter.addActionListener(new ActionListener() {
-	  
-	  @Override
-	  public void actionPerformed (ActionEvent e) {
-		
-		iter.setEnabled(true);
-		dir.setEnabled(false);
-		  
-	  }
-	  	
-	});
-	
 	group.add(mododir);
     group.add(modoiter);
     
-    calcular.setPreferredSize(new Dimension(100,17));
+    calcular.setPreferredSize(new Dimension(129,17));
     limpar.setPreferredSize(new Dimension(130,17));
-    
-    if (modificado) modificar.setSelected(true);
-    modificar.addItemListener(new ItemListener() {
-	  
-	  @Override
-	  public void itemStateChanged(ItemEvent e) {
-        
-        if(modificado) modificado=false;
-        
-        else modificado=true;
-        
-      }
-	  
-	});
-    
+    display.setPreferredSize(new Dimension(150,17));
+   
+    diraux.add(mododir,BorderLayout.WEST);
+    diraux.add(dir,BorderLayout.EAST);
+    iteraux.add(modoiter,BorderLayout.WEST);
+    iteraux.add(iter,BorderLayout.EAST);
+   
     gbc.gridx=0;
     gbc.gridy=0;
-    gbc.insets = new Insets(0,0,0,21);
-    pentry3.add(mododir,gbc);
-    gbc.gridx=1;
-    gbc.insets = new Insets(0,0,0,0);
-    pentry3.add(dir,gbc);
-    gbc.gridx=0;
+    gbc.gridwidth=3;
+    gbc.insets = new Insets(5,0,0,0);
+    pextras.add(diraux,gbc);
     gbc.gridy=1;
-    gbc.insets = new Insets(0,0,0,5);
-    pentry3.add(modoiter,gbc);
-    gbc.gridx=1;
-    gbc.insets = new Insets(0,0,0,0);
-    pentry3.add(iter,gbc);
+    gbc.insets = new Insets(5,0,0,0);
+    pextras.add(iteraux,gbc);
     gbc.gridx=0;
     gbc.gridy=2;
-    gbc.insets = new Insets(5,0,0,58);
-    pentry3.add(calcular,gbc);
-    gbc.gridx=1;
-    gbc.insets = new Insets(5,118,0,0);
-    pentry3.add(limpar,gbc);
-    gbc.gridx=0;
-    gbc.gridy=3;
-    gbc.gridwidth=2;
-    gbc.insets = new Insets(5,0,0,0);
-    pentry3.add(modificar,gbc);
     gbc.gridwidth=1;
+    gbc.insets = new Insets(10,0,0,0);
+    pextras.add(calcular,gbc);
+    gbc.gridx=1;
+    gbc.insets = new Insets(10,0,0,0);
+    pextras.add(display,gbc);
+    gbc.gridx=2;
+    gbc.insets = new Insets(10,0,0,0);
+    pextras.add(limpar,gbc);
     
+    pentry3.add(pextras,BorderLayout.SOUTH);
     add(pentry3,BorderLayout.SOUTH);
 	
+  }
+  
+  //Cria as opções finais alternativas
+  public void entradaAlternativa(boolean boo) {
+	
+	if (!added5) {
+	
+	  limpar.addActionListener (new ActionListener() {
+	  
+	    @Override
+	    public void actionPerformed (ActionEvent e) {
+        
+          det.setText("");
+        
+        }
+	  
+	  }); 
+	  calcular.addActionListener (new ActionListener() {
+	  
+	    @Override
+	    public void actionPerformed (ActionEvent e) {
+          
+          if (!todos) {
+		  
+		    if (metodo==0) System.out.println("0");
+		    
+		    else if (metodo==1) System.out.println("1");
+		    
+		    else if (metodo==2) System.out.println("2");
+		    
+		    else if (metodo==3) System.out.println("3");
+		    
+		    else if (metodo==4) System.out.println("4");
+		    
+		    else if (metodo==5) System.out.println("5");
+		  
+		  }
+        
+        }
+	  
+	  });
+	  dir.addActionListener(new ActionListener () {
+	 	
+	    @Override
+        public void actionPerformed(ActionEvent e) {
+		 
+          metodo=((JComboBox)e.getSource()).getSelectedIndex();
+        
+        }
+      
+      });
+	  added5=true;
+	
+    }
+	  
+	dir.setEnabled(true);
+	dir.setPreferredSize(new Dimension(347,18));
+    calcular.setPreferredSize(new Dimension(130,17));
+    limpar.setPreferredSize(new Dimension(130,17));
+    display.setPreferredSize(new Dimension(150,17));
+    
+    determ.add(new JLabel ("D(A)= "),BorderLayout.WEST);
+    determ.add(det,BorderLayout.EAST);
+    det.setEditable(false);
+    
+    met.add(new JLabel ("Método: "),BorderLayout.WEST);
+    met.add(dir,BorderLayout.EAST);
+    
+    gbc.gridx=1;
+    gbc.gridy=0;
+    gbc.insets = new Insets(5,0,0,0);
+    if (boo) pextras.add(determ,gbc);
+    gbc.gridx=0;
+    gbc.gridy=1;
+    gbc.gridwidth=3;
+    gbc.insets = new Insets(10,0,0,0);
+    pextras.add(met,gbc);
+    gbc.gridy=2;
+    gbc.gridwidth=1;
+    gbc.insets = new Insets(5,0,0,0);
+    pextras.add(calcular,gbc);
+    gbc.gridx=1;
+    gbc.insets = new Insets(5,0,0,0);
+    pextras.add(display,gbc);
+    gbc.gridx=2;
+    gbc.insets = new Insets(5,0,0,0);
+    pextras.add(limpar,gbc);
+    
+    pentry3.add(pextras,BorderLayout.SOUTH);
+    add(pentry3,BorderLayout.SOUTH);
+	  
   }
   
 }
@@ -1559,6 +1916,16 @@ class Metodos {
     
     tp.addTab("D & R",icon,mtd.der,"Deriva e Acha Raízes");
     tp.addTab("S. L.",icon2,mtd.sis,"Calcula Sistemas, além de Determinantes e Inversas de Matrizes");
+    tp.addChangeListener(new ChangeListener() {
+		
+		@Override
+        public void stateChanged(ChangeEvent e) {
+			
+            System.out.println("Tab: " + tp.getSelectedIndex());
+            
+        }
+        
+    });
     jan.add(tp);
     jan.pack();
     jan.setResizable(false);
